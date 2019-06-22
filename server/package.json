@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Jelmerro/World-of-Snek",
   "dependencies": {
+    "minimist": "^1.2.0",
     "ws": "^7.0.0"
   }
 }
