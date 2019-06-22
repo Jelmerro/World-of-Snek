@@ -1,0 +1,33 @@
+body {
+    margin: 0;
+    overflow: hidden;
+}
+/* Modals */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 3;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: #000;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-color: #FFF;
+    color: #363636;
+    margin: auto;
+    padding: 1em;
+    width: 80%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+    border-radius: .25em;
+    transition: max-height 0.4s;
+    overflow: hidden;
+    max-height: 0;
+}
