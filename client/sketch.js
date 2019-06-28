@@ -9,12 +9,13 @@ let success
 let gameData
 let nextDirection
 let playerOneUUID
+let players = []
 
-const lookup = {
-    "37": "left",
-    "39": "right",
-    "38": "up",
-    "40": "down"
+const exampleControls = {
+    up: 38,
+    down: 40,
+    left: 37,
+    right: 39
 }
 
 function setup() {
@@ -51,15 +52,16 @@ function setup() {
     gameData = {
         "state": "connecting"
     }
-    serverIP = prompt("Enter server IP")
+    // serverIP = prompt("Enter server IP")
     // try to connect websocket
     try {
         connectSocket()
     } catch (e) {
-        alert("Cannot connect to server")
+        // alert("Cannot connect to server")
     }
 
-    playerOneUUID = uuid()
+    playerOneUUID = genUuid()
+    players.push(makeNewPlayer("May", "red", exampleControls))
 }
 
 function windowResized() {
@@ -110,7 +112,7 @@ function draw() {
             ]
         }))
     }
-    console.log(nextDirection)
+    // console.log(nextDirection)
     if (success) {
         // text("Connectedu successfurry", 0, 0)
     }
@@ -118,7 +120,7 @@ function draw() {
 
 /* this function was made by broofa and is licensed under cc by-sa 3.0
 https://stackoverflow.com/a/2117523 */
-function uuid() {
+function genUuid() {
     return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
     )
@@ -128,15 +130,15 @@ function connectSocket() {
     socket = new WebSocket("ws://"+serverIP)
     socket.onopen = () => {
         success = true
-        socket.send(JSON.stringify({
-            "type": "newplayer",
-            "uuid": playerOneUUID,
-            "color": "#FF0000",
-            "name": "Mayyy lmao"
-        }))
         // socket.send(JSON.stringify({
         //     "type": "newplayer",
-        //     "uuid": uuid(),
+        //     "uuid": playerOneUUID,
+        //     "color": "#FF0000",
+        //     "name": "Mayyy lmao"
+        // }))
+        // socket.send(JSON.stringify({
+        //     "type": "newplayer",
+        //     "uuid": genUuid(),
         //     "color": "#0000FF",
         //     "name": "Mayyy 2"
         // }))
@@ -145,7 +147,7 @@ function connectSocket() {
         gameData = JSON.parse(e.data)
     }
     socket.onclose = () => {
-        alert("closed")
+        // alert("closed")
     }
 }
 
@@ -163,12 +165,36 @@ function closeModal(id) {
     content.style.maxHeight = "0"
 }
 
-window.addEventListener("keydown", e => {
-    nextDirection = lookup[e.keyCode.toString()] || nextDirection
-})
-
-window.addEventListener("keyup", e => {
-    if (Object.keys(lookup).includes(e.keyCode.toString())) {
-        nextDirection = ""
+// Make players with name, color, and preferred controls for up/down/left/right
+function makeNewPlayer(name, color, controls) {
+    return {
+        name,
+        color,
+        uuid: genUuid(),
+        controls: {
+            up: controls.up,
+            down: controls.down,
+            left: controls.left,
+            right: controls.right,
+            upPressed: false,
+            downPressed: false,
+            leftPressed: false,
+            rightPressed: false,
+            nextMove: ""
+        }
     }
-})
+}
+
+function sendPlayerToServer(player) {
+    const message = {
+        name: player.name,
+        color: player.color,
+        uuid: player.uuid,
+        type: "newplayer"
+    }
+    try {
+        socket.send(JSON.stringify(message))
+    } catch (e) {
+        console.error("Couldn't send player to server: " + e)
+    }
+}
