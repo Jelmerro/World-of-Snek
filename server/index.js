@@ -45,9 +45,19 @@ const rotationToDirection = r => {
     console.log("rotation value with an issue:", r)
     return ["down", "left", "up", "right"][Math.floor(Math.random) * 4]
 }
+const distance = (x, y, x2, y2) => {
+    return Math.sqrt(Math.pow(x - x2, 2) + Math.pow(y - y2, 2))
+}
 const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
     if (game.area.shape === "circle") {
-        //TODO implement circle bounds and wrap calculations
+        if (distance(x, y, game.area.current.x, game.area.current.y) > game.area.current.r) {
+            if (game.wrap && allowWrap) {
+                x = game.area.current.x + game.area.current.x - x
+                y = game.area.current.y + game.area.current.y - y
+            } else {
+                player.alive = false
+            }
+        }
         return [x, y]
     }
     if (game.area.shape === "square") {
@@ -193,7 +203,7 @@ const shiftArea = () => {
         if (game.state !== "game") {
             break
         }
-        checkOutOfBounds(player, player.position[0][0], player.position[0][1], false)
+        checkOutOfBoundsAndWrap(player, player.position[0][0], player.position[0][1], false)
     }
 }
 
@@ -513,7 +523,11 @@ const gameloop = delta => {
                 generateNewArea()
             }
         } else if (game.area.type === "gradual" && game.area.new.x) {
-            //TODO move the gradual area to a location based on the timer
+            const step = game.area.time / delta
+            const totalXDistance = game.area.new.x - game.area.current.x
+            game.area.current.x += totalXDistance * step
+            const totalYDistance = game.area.new.y - game.area.current.y
+            game.area.current.y += totalYDistance * step
         }
     }
     if (game.state === "ready") {
