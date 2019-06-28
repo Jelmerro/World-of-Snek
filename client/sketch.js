@@ -19,7 +19,8 @@
 "use strict"
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
-circle text textSize textAlign fill square rectMode noFill noStroke scale*/
+circle text textSize textAlign fill square rectMode noFill noStroke scale
+strokeWeight */
 
 let testPacket
 let socket, serverIP
@@ -122,6 +123,7 @@ function draw() {
     if (gameData.state === "game") {
         scale(1, -1)
         noFill()
+        strokeWeight(2)
         // draw initial area
         const initialArea = gameData.area.init
         stroke("#777777")
@@ -163,9 +165,9 @@ function draw() {
             }
             player.position.forEach(position => {
                 if (player.shape === "square") {
-                    square(position[0], position[1], player.size)
+                    square(position[0], position[1], player.size*2)
                 } else if (player.shape === "circle") {
-                    circle(position[0], position[1], player.size)
+                    circle(position[0], position[1], player.size*2)
                 }
             })
         })
@@ -238,6 +240,9 @@ function connectSocket() {
     socket.onclose = () => {
         alert("closed")
         gameData.state = "connecting"
+        if (confirm("reconnect to " + serverIP + "?")) {
+            connectSocket()
+        }
     }
 }
 
