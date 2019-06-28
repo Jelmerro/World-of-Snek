@@ -289,7 +289,7 @@ const game = {
     players: [],
     area: {
         init: {},
-        old: {},
+        current: {},
         new: {},
         time: 0,
         shape: null,
