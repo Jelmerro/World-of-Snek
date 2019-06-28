@@ -1,7 +1,25 @@
+/*
+* World of Snek - Snake Battle Royale
+* Copyright (C) 2019 M4Yt
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use strict"
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
-circle text textSize textAlign fill square rectMode noFill noStroke*/
+circle text textSize textAlign fill square rectMode noFill noStroke scale*/
 
 let testPacket
 let socket, serverIP
@@ -9,7 +27,7 @@ let success
 let gameData
 let nextDirection
 let playerOneUUID
-let players = []
+const players = []
 
 const exampleControls = {
     up: 38,
@@ -52,16 +70,16 @@ function setup() {
     gameData = {
         "state": "connecting"
     }
-    // serverIP = prompt("Enter server IP")
+    serverIP = prompt("Enter server IP")
     // try to connect websocket
     try {
         connectSocket()
     } catch (e) {
-        // alert("Cannot connect to server")
+        alert("Cannot connect to server")
     }
 
     playerOneUUID = genUuid()
-    players.push(makeNewPlayer("May", "red", exampleControls))
+    players.push(makeNewPlayer("May", "orange", exampleControls))
 }
 
 function windowResized() {
@@ -89,8 +107,47 @@ function draw() {
             text(player.name, 0, 16)
             translate(0, 80)
         })
+        players.forEach(player => {
+            sendPlayerToServer(player)
+        })
     }
     if (gameData.state === "game") {
+        scale(1, -1)
+        noFill()
+        // draw initial area
+        const initialArea = gameData.area.init
+        stroke("#777777")
+        if (gameData.area.shape === "square") {
+            // TODO: set color and stuff
+            square(initialArea.x, initialArea.y, initialArea.r*2)
+        } else if (gameData.area.shape === "circle") {
+            circle(initialArea.x, initialArea.y, initialArea.r*2)
+        }
+        // draw new area
+        const newArea = gameData.area.new
+        stroke("blue")
+        if (newArea.x) {
+            if (gameData.area.shape === "square") {
+                // TODO: set color and stuff
+                square(newArea.x, newArea.y, newArea.r*2)
+            } else if (gameData.area.shape === "circle") {
+                circle(newArea.x, newArea.y, newArea.r*2)
+            }
+        }
+        // draw current area
+        const currentArea = gameData.area.current
+        if (gameData.wrap) {
+            stroke("green")
+        } else {
+            stroke("red")
+        }
+        if (gameData.area.shape === "square") {
+            // TODO: set color and stuff
+            square(currentArea.x, currentArea.y, currentArea.r*2)
+        } else if (gameData.area.shape === "circle") {
+            circle(currentArea.x, currentArea.y, currentArea.r*2)
+        }
+        // draw players
         gameData.players.forEach(player => {
             noStroke()
             // make rainbow option and other magic words
@@ -99,18 +156,39 @@ function draw() {
                 fill("#777777")
             }
             player.position.forEach(position => {
-                circle(position[0], position[1], player.size)
+                if (player.shape === "square") {
+                    square(position[0], position[1], player.size)
+                } else if (player.shape === "circle") {
+                    circle(position[0], position[1], player.size)
+                }
             })
         })
-        socket.send(JSON.stringify({
-            "type": "movement",
-            "moves": [
-                {
-                    "uuid": playerOneUUID,
-                    "dir": nextDirection
-                }
-            ]
-        }))
+        // send player moves to server
+        players.forEach(player => {
+            player.controls.nextMove = ""
+            if (player.controls.upPressed) {
+                player.controls.nextMove = "up"
+            }
+            if (player.controls.downPressed) {
+                player.controls.nextMove = "down"
+            }
+            if (player.controls.leftPressed) {
+                player.controls.nextMove = "left"
+            }
+            if (player.controls.rightPressed) {
+                player.controls.nextMove = "right"
+            }
+            sendMoveToServer(player)
+        })
+        // socket.send(JSON.stringify({
+        //     "type": "movement",
+        //     "moves": [
+        //         {
+        //             "uuid": playerOneUUID,
+        //             "dir": nextDirection
+        //         }
+        //     ]
+        // }))
     }
     // console.log(nextDirection)
     if (success) {
@@ -147,7 +225,8 @@ function connectSocket() {
         gameData = JSON.parse(e.data)
     }
     socket.onclose = () => {
-        // alert("closed")
+        alert("closed")
+        gameData.state = "connecting"
     }
 }
 
@@ -197,4 +276,16 @@ function sendPlayerToServer(player) {
     } catch (e) {
         console.error("Couldn't send player to server: " + e)
     }
+}
+
+function sendMoveToServer(player) {
+    socket.send(JSON.stringify({
+        "type": "movement",
+        "moves": [
+            {
+                "uuid": player.uuid,
+                "dir": player.controls.nextMove
+            }
+        ]
+    }))
 }
