@@ -52,8 +52,22 @@ const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
     if (game.area.shape === "circle") {
         if (distance(x, y, game.area.current.x, game.area.current.y) > game.area.current.r) {
             if (game.wrap && allowWrap) {
-                x = game.area.current.x + game.area.current.x - x
-                y = game.area.current.y + game.area.current.y - y
+                let newX = game.area.current.x + game.area.current.x - x
+                let newY = game.area.current.y + game.area.current.y - y
+                if (newX > 0) {
+                    newX = newX - 1
+                }
+                if (newX < 0) {
+                    newX = newX + 1
+                }
+                if (newY > 0) {
+                    newY = newY - 1
+                }
+                if (newY < 0) {
+                    newY = newY + 1
+                }
+                x = newX
+                y = newY
             } else {
                 player.alive = false
             }
@@ -67,16 +81,28 @@ const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
         const bottomBorder = game.area.current.y - game.area.current.r
         if (game.wrap && allowWrap) {
             if (x < leftBorder) {
-                x += game.area.current.r * 2
+                x = x + game.area.current.r * 2 - 1
+                if (player.shape === "square") {
+                    player.direction = "left"
+                }
             }
             if (x > rightBorder) {
-                x -= game.area.current.r * 2
+                x = x - game.area.current.r * 2 + 1
+                if (player.shape === "square") {
+                    player.direction = "right"
+                }
             }
             if (y > topBorder) {
-                y -= game.area.current.r * 2
+                y = y - game.area.current.r * 2 + 1
+                if (player.shape === "square") {
+                    player.direction = "up"
+                }
             }
             if (y < bottomBorder) {
-                y += game.area.current.r * 2
+                y = y + game.area.current.r * 2 - 1
+                if (player.shape === "square") {
+                    player.direction = "down"
+                }
             }
         } else if (x < leftBorder || x > rightBorder || y > topBorder || y < bottomBorder) {
             player.alive = false
@@ -114,10 +140,10 @@ const moveCircle = (player, pixels) => {
         cornerSpeed = 0.01
     }
     if (player.preferredMove === "left") {
-        player.direction -= cornerSpeed
+        player.direction += cornerSpeed
     }
     if (player.preferredMove === "right") {
-        player.direction += cornerSpeed
+        player.direction -= cornerSpeed
     }
     const [originalX, originalY] = player.position[0]
     for (let i = 0;i < pixels;i++) {
@@ -159,10 +185,10 @@ const moveSquare = (player, pixels) => {
             newX += 1
         }
         if (player.direction === "up") {
-            newY -= 1
+            newY += 1
         }
         if (player.direction === "down") {
-            newY += 1
+            newY -= 1
         }
         movePlayerIfValid(player, newX, newY)
     }
@@ -175,10 +201,10 @@ const moveSquare = (player, pixels) => {
         newX += pixels
     }
     if (player.direction === "up") {
-        newY -= pixels
+        newY += pixels
     }
     if (player.direction === "down") {
-        newY += pixels
+        newY -= pixels
     }
     movePlayerIfValid(player, newX, newY)
 }
@@ -212,9 +238,9 @@ const shiftArea = () => {
 const defaultSetings = {
     maxPlayers: 69, //any integer above 0
     areaShape: "random", //random, circle, square
-    wrap: "random", //random, yes, no
-    playerShape: "random", //random, circle, square
-    shrinkType: "random", //random, gradual, instant
+    wrap: "yes", //random, yes, no
+    playerShape: "circle", //random, circle, square
+    shrinkType: "gradual", //random, gradual, instant
     shrinkSpeed: "random", //random, fast, normal, slow
     shrinkTimeout: "random", //random, fast, normal, slow, never (not on random)
     powerupsRate: "random", //random, low, medium, high
@@ -342,6 +368,9 @@ const startGame = autotrigger => {
         game.wrap = coinflip()
     }
     game.area.type = game.settings.shrinkType
+    if (game.settings.shrinkType === "random") {
+        game.area.type = coinflip() ? "gradual" : "instant"
+    }
     game.powerups = []
     game.area.init.x = 0
     game.area.init.y = 0
@@ -349,7 +378,7 @@ const startGame = autotrigger => {
         game.area.init.s = coinflip() ? "circle" : "square"
     }
     game.area.init.r = game.players.length * AREASIZE
-    game.area.current = game.area.init
+    game.area.current = Object.assign({}, game.area.init)
     if (game.settings.playerShape === "circle") {
         // radius 3 pixels per position, 30 default positions
         // start position depends on the number of players
@@ -466,9 +495,9 @@ const gameloop = delta => {
                 clients.forEach(c => {
                     const winners = c.players.filter(p => p.uuid === alivePlayers[0].uuid)
                     if (winners.length === 1) {
-                        console.log("the winner is:", winners[0])
                         winners[0].wins += 1
                         game.lastwinner = winners[0]
+                        console.log("the winner is:", winners[0])
                     } else {
                         game.lastwinner = null
                     }
@@ -504,7 +533,11 @@ const gameloop = delta => {
                     interval += SHRINKTIMEOUT * 2
                 }
                 game.area.time = interval
-                shiftArea()
+                if (game.area.type === "gradual") {
+                    game.area.new = {}
+                } else {
+                    shiftArea()
+                }
             } else {
                 let interval = SHRINKSPEED
                 if (game.settings.shrinkSpeed === "random") {
@@ -523,11 +556,15 @@ const gameloop = delta => {
                 generateNewArea()
             }
         } else if (game.area.type === "gradual" && game.area.new.x) {
-            const step = game.area.time / delta
             const totalXDistance = game.area.new.x - game.area.current.x
-            game.area.current.x += totalXDistance * step
+            const speedX = totalXDistance / game.area.time * delta
+            game.area.current.x += speedX
             const totalYDistance = game.area.new.y - game.area.current.y
-            game.area.current.y += totalYDistance * step
+            const speedY = totalYDistance / game.area.time * delta
+            game.area.current.y += speedY
+            const totalRDistance = game.area.new.r - game.area.current.r
+            const speedR = totalRDistance / game.area.time * delta
+            game.area.current.r += speedR
         }
     }
     if (game.state === "ready") {
@@ -548,6 +585,9 @@ const informClients = () => {
     if (game.state === "game" || game.state === "ready") {
         const filteredGame = Object.assign({}, game)
         filteredGame.settings = undefined
+        if (game.state === "game") {
+            filteredGame.countdown = undefined
+        }
         clients.forEach(c => {
             if (c.socket) {
                 c.socket.send(JSON.stringify(filteredGame))
