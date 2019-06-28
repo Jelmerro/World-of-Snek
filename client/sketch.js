@@ -36,6 +36,13 @@ const exampleControls = {
     right: 39
 }
 
+const exampleControls2 = {
+    up: 87,
+    down: 83,
+    left: 65,
+    right: 68
+}
+
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
     testPacket = {
@@ -80,6 +87,7 @@ function setup() {
 
     playerOneUUID = genUuid()
     players.push(makeNewPlayer("May", "orange", exampleControls))
+    players.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
 }
 
 function windowResized() {
@@ -128,7 +136,6 @@ function draw() {
         stroke("blue")
         if (newArea.x) {
             if (gameData.area.shape === "square") {
-                // TODO: set color and stuff
                 square(newArea.x, newArea.y, newArea.r*2)
             } else if (gameData.area.shape === "circle") {
                 circle(newArea.x, newArea.y, newArea.r*2)
@@ -142,7 +149,6 @@ function draw() {
             stroke("red")
         }
         if (gameData.area.shape === "square") {
-            // TODO: set color and stuff
             square(currentArea.x, currentArea.y, currentArea.r*2)
         } else if (gameData.area.shape === "circle") {
             circle(currentArea.x, currentArea.y, currentArea.r*2)
@@ -164,6 +170,7 @@ function draw() {
             })
         })
         // send player moves to server
+        const moves = []
         players.forEach(player => {
             player.controls.nextMove = ""
             if (player.controls.upPressed) {
@@ -178,8 +185,12 @@ function draw() {
             if (player.controls.rightPressed) {
                 player.controls.nextMove = "right"
             }
-            sendMoveToServer(player)
+            moves.push({
+                uuid: player.uuid,
+                dir: player.controls.nextMove
+            })
         })
+        sendMovesToServer(moves)
         // socket.send(JSON.stringify({
         //     "type": "movement",
         //     "moves": [
@@ -278,14 +289,9 @@ function sendPlayerToServer(player) {
     }
 }
 
-function sendMoveToServer(player) {
+function sendMovesToServer(moves) {
     socket.send(JSON.stringify({
-        "type": "movement",
-        "moves": [
-            {
-                "uuid": player.uuid,
-                "dir": player.controls.nextMove
-            }
-        ]
+        type: "movement",
+        moves: moves
     }))
 }
