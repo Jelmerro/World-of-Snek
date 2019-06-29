@@ -1,5 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
+* Copyright (C) 2019 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -155,6 +156,12 @@ function draw() {
         } else if (gameData.area.shape === "circle") {
             circle(currentArea.x, currentArea.y, currentArea.r*2)
         }
+        // draw food
+        gameData.food.forEach(food => {
+            noStroke()
+            fill("#ffffff")
+            circle(food.x, food.y, food.r*2)
+        })
         // draw players
         gameData.players.forEach(player => {
             noStroke()

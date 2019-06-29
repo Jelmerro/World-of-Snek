@@ -26,8 +26,8 @@ const coinflip = (chance=0.5) => Math.random() < chance
 const TAU = 2 * Math.PI
 const PI = Math.PI
 const SPEED = 10
-const AREASIZE = 100
-const INITIALLENGTH = 100
+const AREASIZE = 300
+const INITIALLENGTH = 200
 const INITIALSIZE = 20
 const SHRINKTIMEOUT = 10000000000 // 10 seconds - in nanoseconds
 const SHRINKSPEED = 10000000000 // 10 seconds - in nanoseconds
@@ -110,8 +110,88 @@ const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
         return [x, y]
     }
 }
+const checkForCollisions = (currentPlayer, x, y) => {
+    for (const p of game.players) {
+        if (!currentPlayer.alive) {
+            break
+        }
+        for (const position of p.position) {
+            if (currentPlayer.shape === "square") {
+                if (p.shape === "square") {
+                    //square, square
+                    if (currentPlayer === p) {
+                        let playerMovingX = x
+                        let playerMovingY = y
+                        if (p.direction === "up") {
+                            playerMovingY += 20
+                        }
+                        if (p.direction === "down") {
+                            playerMovingY -= 20
+                        }
+                        if (p.direction === "left") {
+                            playerMovingX -= 20
+                        }
+                        if (p.direction === "right") {
+                            playerMovingX += 20
+                        }
+                        if (Math.abs(playerMovingX - position[0]) < p.size && Math.abs(playerMovingY - position[1]) < p.size) {
+                            p.alive = false
+                            break
+                        }
+                    } else if (Math.abs(x - position[0]) < currentPlayer.size + p.size && Math.abs(y - position[1]) < currentPlayer.size + p.size) {
+                        currentPlayer.alive = false
+                        break
+                    }
+                }
+                if (p.shape === "circle") {
+                    //square, circle
+                }
+            }
+            if (currentPlayer.shape === "circle") {
+                if (p.shape === "square") {
+                    //circle, square
+                }
+                if (p.shape === "circle") {
+                    //circle, circle
+                    if (currentPlayer === p) {
+                        const playerMovingX = x + 20 * Math.cos(p.direction)
+                        const playerMovingY = y + 20 * Math.sin(p.direction)
+                        if (distance(playerMovingX, playerMovingY, position[0], position[1]) < p.size) {
+                            p.alive = false
+                            break
+                        }
+                    } else if (distance(x, y, position[0], position[1]) < p.size + currentPlayer.size) {
+                        currentPlayer.alive = false
+                        break
+                    }
+                }
+            }
+        }
+    }
+}
+const possiblyEatFood = (player, x, y) => {
+    const allFood = JSON.parse(JSON.stringify(game.food))
+    for (const food of allFood) {
+        if (distance(x, y, food.x, food.y) < player.size + food.r) {
+            const pickedUp = game.food.filter(f => {
+                return f.x === food.x && f.y === food.y
+            })[0]
+            game.food.splice(game.food.indexOf(pickedUp), 1)
+            player.score += 1
+            player.speed *= 1.1
+            const appendLength = player.position.length * 1.2 - player.position.length
+            const x = player.position[player.position.length - 1][0]
+            const y = player.position[player.position.length - 1][1]
+            for (let _ = 0;_ < appendLength;_++) {
+                player.position.push([x, y])
+            }
+        }
+    }
+}
 const movePlayerIfValid = (player, x, y) => {
     const [wrappedX, wrappedY] = checkOutOfBoundsAndWrap(player, x, y)
+    checkForCollisions(player, x, y)
+    possiblyEatFood(player, x, y)
     if (player.alive) {
         player.position.unshift([wrappedX, wrappedY])
         player.position.pop()
@@ -146,12 +226,6 @@ const moveCircle = (player, pixels) => {
         player.direction -= cornerSpeed
     }
     const [originalX, originalY] = player.position[0]
-    for (let i = 0;i < pixels;i++) {
-        const [oldX, oldY] = player.position[0]
-        const newX = oldX + Math.cos(player.direction)
-        const newY = oldY + Math.sin(player.direction)
-        movePlayerIfValid(player, newX, newY)
-    }
     const newX = originalX + pixels * Math.cos(player.direction)
     const newY = originalY + pixels * Math.sin(player.direction)
     movePlayerIfValid(player, newX, newY)
@@ -174,24 +248,6 @@ const moveSquare = (player, pixels) => {
         player.direction = rotationToDirection(player.direction)
     }
     const [originalX, originalY] = player.position[0]
-    for (let i = 0;i < pixels;i++) {
-        const [oldX, oldY] = player.position[0]
-        let newX = oldX
-        let newY = oldY
-        if (player.direction === "left") {
-            newX -= 1
-        }
-        if (player.direction === "right") {
-            newX += 1
-        }
-        if (player.direction === "up") {
-            newY += 1
-        }
-        if (player.direction === "down") {
-            newY -= 1
-        }
-        movePlayerIfValid(player, newX, newY)
-    }
     let newX = originalX
     let newY = originalY
     if (player.direction === "left") {
@@ -208,7 +264,6 @@ const moveSquare = (player, pixels) => {
     }
     movePlayerIfValid(player, newX, newY)
 }
-
 const generateNewArea = () => {
     const moveX = Math.random() / 5 * game.area.current.r * Math.cos(Math.random() * TAU)
     const moveY = Math.random() / 5 * game.area.current.r * Math.sin(Math.random() * TAU)
@@ -221,7 +276,6 @@ const generateNewArea = () => {
         game.area.type = game.settings.shrinkType
     }
 }
-
 const shiftArea = () => {
     game.area.current = game.area.new
     game.area.new = {}
@@ -232,15 +286,64 @@ const shiftArea = () => {
         checkOutOfBoundsAndWrap(player, player.position[0][0], player.position[0][1], false)
     }
 }
+const updateFood = () => {
+    let desiredFoodCount = 1
+    if (game.settings.foodCount === "players") {
+        desiredFoodCount = game.players.length
+    }
+    const leftBorder = game.area.current.x - game.area.current.r
+    const rightBorder = game.area.current.x + game.area.current.r
+    const topBorder = game.area.current.y + game.area.current.r
+    const bottomBorder = game.area.current.y - game.area.current.r
+    game.food = game.food.filter(f => {
+        if (game.area.shape === "circle") {
+            return distance(f.x, f.y, game.area.current.x, game.area.current.y) < game.area.current.r
+        }
+        if (game.area.shape === "square") {
+            return f.x < rightBorder && f.x > leftBorder && f.y > bottomBorder && f.y < topBorder
+        }
+        return false
+    })
+    const foodRadius = 10
+    while (desiredFoodCount > game.food.length) {
+        let x = null
+        let y = null
+        let collision = true
+        while (collision) {
+            if (game.area.shape === "circle") {
+                x = game.area.current.x + game.area.current.r * Math.cos(Math.random() * TAU)
+                y = game.area.current.y + game.area.current.r * Math.sin(Math.random() * TAU)
+            }
+            if (game.area.shape === "square") {
+                x = game.area.current.x + game.area.current.r * Math.random()
+                y = game.area.current.x + game.area.current.r * Math.random()
+            }
+            collision = false
+            for (const player of game.players) {
+                for (const position of player.position) {
+                    if (distance(x, y, position[0], position[1]) < player.size + foodRadius * 3) {
+                        collision = true
+                        break
+                    }
+                }
+            }
+        }
+        game.food.push({
+            x: x,
+            y: y,
+            r: foodRadius
+        })
+    }
+}
 
 // SETTINGS
 
 const defaultSetings = {
     maxPlayers: 69, //any integer above 0
     areaShape: "random", //random, circle, square
-    wrap: "yes", //random, yes, no
-    playerShape: "circle", //random, circle, square
-    shrinkType: "gradual", //random, gradual, instant
+    wrap: "random", //random, yes, no
+    playerShape: "random", //random, circle, square
+    shrinkType: "random", //random, gradual, instant
     shrinkSpeed: "random", //random, fast, normal, slow
     shrinkTimeout: "random", //random, fast, normal, slow, never (not on random)
     powerupsRate: "random", //random, low, medium, high
@@ -255,6 +358,7 @@ const defaultSetings = {
     ],
     powerupsDespawn: "random", //random, fast, slow, never (not on random)
     foodCount: "random", //random, 1, players
+    gamemode: "random", //random, lastalive, score
     port: 3000
 }
 const settings = JSON.parse(JSON.stringify(defaultSetings))
@@ -298,6 +402,9 @@ if (args.powerupsDespawn && ["random", "fast", "slow", "never"].includes(String(
 if (args.foodCount && ["random", "1", "players"].includes(String(args.foodCount))) {
     settings.foodCount = String(args.foodCount)
 }
+if (args.gamemode && ["random", "lastalive", "score"].includes(String(args.gamemode))) {
+    settings.gamemode = String(args.gamemode)
+}
 if (args.port && Number(args.port) > 0 && Number(args.port) < 100000) {
     settings.port = Number(args.port)
 }
@@ -322,7 +429,9 @@ const game = {
         type: null
     },
     powerups: [],
+    food: [],
     lastwinner: null,
+    lastalive: null,
     wrap: null
 }
 
@@ -341,7 +450,9 @@ const startGame = autotrigger => {
                 alive: true,
                 position: [],
                 powerups: [],
-                wins: p.wins
+                wins: p.wins,
+                speed: SPEED,
+                score: 0
             })
         })
     })
@@ -363,9 +474,15 @@ const startGame = autotrigger => {
     if (game.settings.playerShape === "random") {
         game.settings.playerShape = coinflip() ? "circle" : "square"
     }
+    if (game.settings.foodCount === "random") {
+        game.settings.foodCount = coinflip() ? "1" : "players"
+    }
     game.wrap = game.settings.wrap === "yes"
     if (game.settings.wrap === "random") {
         game.wrap = coinflip()
+    }
+    if (game.settings.gamemode === "random") {
+        game.settings.gamemode = coinflip() ? "lastalive" : "score"
     }
     game.area.type = game.settings.shrinkType
     if (game.settings.shrinkType === "random") {
@@ -380,32 +497,41 @@ const startGame = autotrigger => {
     game.area.init.r = game.players.length * AREASIZE
     game.area.current = Object.assign({}, game.area.init)
     if (game.settings.playerShape === "circle") {
-        // radius 3 pixels per position, 30 default positions
-        // start position depends on the number of players
         game.players.forEach((p, index) => {
             const startRotation = TAU / game.players.length * index
-            const x = 0.8 * game.area.init.r * Math.cos(startRotation)
-            const y = 0.8 * game.area.init.r * Math.sin(startRotation)
+            const x = 0.7 * game.area.init.r * Math.cos(startRotation)
+            const y = 0.7 * game.area.init.r * Math.sin(startRotation)
             p.direction = startRotation + PI
             p.size = INITIALSIZE
             p.shape = "circle"
             p.position.push([x, y])
-            for (let i = 0;i < INITIALLENGTH;i++) {
-                p.position.push([x, y])
+            for (let i = 1;i < INITIALLENGTH;i++) {
+                p.position.push([x + (i * Math.cos(startRotation)), y + (i * Math.sin(startRotation))])
             }
         })
     }
     if (game.settings.playerShape === "square") {
         game.players.forEach((p, index) => {
             const startRotation = TAU / game.players.length * index
-            const x = 0.8 * game.area.init.r * Math.cos(startRotation)
-            const y = 0.8 * game.area.init.r * Math.sin(startRotation)
+            const x = 0.7 * game.area.init.r * Math.cos(startRotation)
+            const y = 0.7 * game.area.init.r * Math.sin(startRotation)
             p.direction = rotationToDirection(startRotation)
             p.size = INITIALSIZE
             p.shape = "square"
             p.position.push([x, y])
-            for (let i = 0;i < INITIALLENGTH;i++) {
-                p.position.push([x, y])
+            for (let i = 1;i < INITIALLENGTH;i++) {
+                if (rotationToDirection(startRotation + PI) === "left") {
+                    p.position.push([x - i, y])
+                }
+                if (rotationToDirection(startRotation + PI) === "right") {
+                    p.position.push([x + i, y])
+                }
+                if (rotationToDirection(startRotation + PI) === "up") {
+                    p.position.push([x, y + i])
+                }
+                if (rotationToDirection(startRotation + PI) === "down") {
+                    p.position.push([x, y - i])
+                }
             }
         })
     }
@@ -487,27 +613,55 @@ const processMessage = (clientId, message) => {
         })
     }
 }
+const announceWinner = player => {
+    if (player) {
+        clients.forEach(c => {
+            const winners = c.players.filter(p => p.uuid === player.uuid)
+            if (winners.length === 1) {
+                winners[0].wins += 1
+                game.lastwinner = winners[0]
+                console.log("the winner is:", winners[0])
+            } else {
+                console.log("it's a draw")
+                game.lastwinner = null
+            }
+        })
+    } else {
+        console.log("it's a draw")
+        game.lastwinner = null
+    }
+}
 const gameloop = delta => {
     if (game.state === "game") {
         const alivePlayers = game.players.filter(p => p.alive)
-        if (alivePlayers.length < 2) {
-            if (alivePlayers[0]) {
-                clients.forEach(c => {
-                    const winners = c.players.filter(p => p.uuid === alivePlayers[0].uuid)
-                    if (winners.length === 1) {
-                        winners[0].wins += 1
-                        game.lastwinner = winners[0]
-                        console.log("the winner is:", winners[0])
-                    } else {
-                        game.lastwinner = null
-                    }
+        if (game.settings.gamemode === "lastalive" && alivePlayers.length < 2) {
+            announceWinner(alivePlayers[0])
+            stopGame()
+        }
+        if (game.settings.gamemode === "score") {
+            if (alivePlayers.length === 1) {
+                game.lastalive = alivePlayers[0]
+            } else if (alivePlayers.length === 0) {
+                let highestScoringPlayers = game.players.sort((a, b) => {
+                    return b.score - a.score
                 })
+                highestScoringPlayers = highestScoringPlayers.filter(p => {
+                    return p.score === highestScoringPlayers[0].score
+                })
+                if (highestScoringPlayers.includes(game.lastalive)) {
+                    announceWinner(game.lastalive)
+                } else if (highestScoringPlayers.length === 1) {
+                    announceWinner(highestScoringPlayers[0])
+                } else {
+                    console.log("it's a draw")
+                    game.lastwinner = null
+                }
+                stopGame()
             }
-            game.state = "lobby"
         }
         game.players.forEach(p => {
             if (p.alive) {
-                const pixels = delta / 100000000 * SPEED
+                const pixels = delta / 100000000 * p.speed
                 if (p.shape === "circle") {
                     moveCircle(p, pixels)
                 }
@@ -517,55 +671,58 @@ const gameloop = delta => {
             }
         })
         game.area.time -= delta
-        if (game.area.time < 0 && game.settings.shrinkTimeout !== "never") {
-            if (game.area.new.x) {
-                let interval = SHRINKTIMEOUT
-                if (game.settings.shrinkTimeout === "random") {
-                    if (coinflip(0.3)) {
+        if (game.settings.shrinkTimeout !== "never") {
+            if (game.area.time < 0) {
+                if (game.area.new.x) {
+                    let interval = SHRINKTIMEOUT
+                    if (game.settings.shrinkTimeout === "random") {
+                        if (coinflip(0.3)) {
+                            interval += SHRINKTIMEOUT
+                        }
+                        if (coinflip(0.3)) {
+                            interval += SHRINKTIMEOUT
+                        }
+                    } else if (game.settings.shrinkTimeout === "medium") {
                         interval += SHRINKTIMEOUT
+                    } else if (game.settings.shrinkTimeout === "slow") {
+                        interval += SHRINKTIMEOUT * 2
                     }
-                    if (coinflip(0.3)) {
-                        interval += SHRINKTIMEOUT
+                    game.area.time = interval
+                    if (game.area.type === "gradual") {
+                        game.area.new = {}
+                    } else {
+                        shiftArea()
                     }
-                } else if (game.settings.shrinkTimeout === "medium") {
-                    interval += SHRINKTIMEOUT
-                } else if (game.settings.shrinkTimeout === "slow") {
-                    interval += SHRINKTIMEOUT * 2
-                }
-                game.area.time = interval
-                if (game.area.type === "gradual") {
-                    game.area.new = {}
                 } else {
-                    shiftArea()
-                }
-            } else {
-                let interval = SHRINKSPEED
-                if (game.settings.shrinkSpeed === "random") {
-                    if (coinflip(0.3)) {
+                    let interval = SHRINKSPEED
+                    if (game.settings.shrinkSpeed === "random") {
+                        if (coinflip(0.3)) {
+                            interval += SHRINKSPEED
+                        }
+                        if (coinflip(0.3)) {
+                            interval += SHRINKSPEED
+                        }
+                    } else if (game.settings.shrinkSpeed === "medium") {
                         interval += SHRINKSPEED
+                    } else if (game.settings.shrinkSpeed === "slow") {
+                        interval += SHRINKSPEED * 2
                     }
-                    if (coinflip(0.3)) {
-                        interval += SHRINKSPEED
-                    }
-                } else if (game.settings.shrinkSpeed === "medium") {
-                    interval += SHRINKSPEED
-                } else if (game.settings.shrinkSpeed === "slow") {
-                    interval += SHRINKSPEED * 2
+                    game.area.time = interval
+                    generateNewArea()
                 }
-                game.area.time = interval
-                generateNewArea()
+            } else if (game.area.type === "gradual" && game.area.new.x) {
+                const totalXDistance = game.area.new.x - game.area.current.x
+                const speedX = totalXDistance / game.area.time * delta
+                game.area.current.x += speedX
+                const totalYDistance = game.area.new.y - game.area.current.y
+                const speedY = totalYDistance / game.area.time * delta
+                game.area.current.y += speedY
+                const totalRDistance = game.area.new.r - game.area.current.r
+                const speedR = totalRDistance / game.area.time * delta
+                game.area.current.r += speedR
             }
-        } else if (game.area.type === "gradual" && game.area.new.x) {
-            const totalXDistance = game.area.new.x - game.area.current.x
-            const speedX = totalXDistance / game.area.time * delta
-            game.area.current.x += speedX
-            const totalYDistance = game.area.new.y - game.area.current.y
-            const speedY = totalYDistance / game.area.time * delta
-            game.area.current.y += speedY
-            const totalRDistance = game.area.new.r - game.area.current.r
-            const speedR = totalRDistance / game.area.time * delta
-            game.area.current.r += speedR
         }
+        updateFood()
     }
     if (game.state === "ready") {
         if (game.countdown < 0) {
