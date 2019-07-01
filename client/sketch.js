@@ -1,7 +1,7 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
+* Copyright (C) 2019 Jelmer van Arnhem
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,14 @@
 circle text textSize textAlign fill square rectMode noFill noStroke scale
 strokeWeight */
 
-let testPacket
 let socket, serverIP
 let success
-let gameData
-let nextDirection
-let playerOneUUID
+let gameData = {
+    state: "connecting"
+}
+let windowScale = 1
+let dynamicScaling = true
+let lastCenter = [0, 0]
 const players = []
 
 const exampleControls = {
@@ -47,38 +49,6 @@ const exampleControls2 = {
 
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
-    testPacket = {
-        "players": [
-            {
-                "uuid": "5132e4ef-5bbf-416e-a3ca-1640aa3641aa",
-                "position": [[0, 0], [0, 100], [-100, 100]],
-                "size": 20
-            }
-        ],
-        "area": {
-            "old": {
-                "x": 0,
-                "y": 0,
-                "size": 1000
-            },
-            "new": {
-                "x": 0,
-                "y": 200,
-                "size": 800
-            },
-            "time": 4200
-        },
-        "powerups": [
-            {
-                "x": 20,
-                "y": -300,
-                "type": "cornerup"
-            }
-        ]
-    }
-    gameData = {
-        "state": "connecting"
-    }
     serverIP = prompt("Enter server IP")
     // try to connect websocket
     try {
@@ -86,8 +56,6 @@ function setup() {
     } catch (e) {
         alert("Cannot connect to server")
     }
-
-    playerOneUUID = genUuid()
     players.push(makeNewPlayer("May", "orange", exampleControls))
     players.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
 }
@@ -99,7 +67,7 @@ function windowResized() {
 function draw() {
     background(0)
     fill(255)
-    stroke(255)
+    noStroke()
     textAlign("center")
     textSize(64)
     rectMode("center")
@@ -107,22 +75,50 @@ function draw() {
     // center circle
     circle(0, 0, 5)
     if (gameData.state === "connecting") {
-        text("The blutüth device is ready to pair")
+        text("Ze blutüth device is ready to pair", 0, 0)
+    }
+    if (gameData.state === "ready") {
+        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
+        // dividing to get seconds from nanoseconds
+        translate(0, 64-windowHeight/2)
+        text("Get ready!", 0, 16)
+        translate(0, 80)
+        if (countdown > 2) {
+            fill("green")
+        } else if (countdown > 1) {
+            fill("orange")
+        } else {
+            fill("red")
+        }
+        text(countdown, 0, 16)
     }
     if (gameData.state === "lobby") {
-        noStroke()
+        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
+        // dividing to get seconds from nanoseconds
         translate(0, 64-windowHeight/2)
+        text(`Welcome to the lobby! Next game in ${countdown}s`, 0, 16)
         gameData.players.forEach(player => {
-            fill(player.color)
-            text(player.name, 0, 16)
             translate(0, 80)
+            fill(player.color)
+            const winOrWins = player.wins === 1 ? "win" : "wins"
+            text(`${player.name} - ${player.wins} ${winOrWins}`, 0, 16)
         })
         players.forEach(player => {
             sendPlayerToServer(player)
         })
     }
     if (gameData.state === "game") {
-        scale(1, -1)
+        if (dynamicScaling) {
+            windowScale = smallerDim() / (gameData.area.current.r * 2)
+            const [oldX, oldY] = lastCenter
+            const [x, y] = [gameData.area.current.x, gameData.area.current.y]
+            const [deltaX, deltaY] = [x - oldX, y - oldY]
+            translate(deltaX, -deltaY) // flipped y?
+            lastCenter = [x, y]
+        } else {
+            windowScale = smallerDim() / (gameData.area.init.r * 2)
+        }
+        scale(windowScale, -windowScale) // negative to flip y axis
         noFill()
         strokeWeight(2)
         // draw initial area
@@ -156,15 +152,14 @@ function draw() {
         } else if (gameData.area.shape === "circle") {
             circle(currentArea.x, currentArea.y, currentArea.r*2)
         }
+        noStroke()
         // draw food
         gameData.food.forEach(food => {
-            noStroke()
             fill("#ffffff")
             circle(food.x, food.y, food.r*2)
         })
         // draw players
         gameData.players.forEach(player => {
-            noStroke()
             // make rainbow option and other magic words
             fill(player.color)
             if (!player.alive) {
@@ -200,17 +195,7 @@ function draw() {
             })
         })
         sendMovesToServer(moves)
-        // socket.send(JSON.stringify({
-        //     "type": "movement",
-        //     "moves": [
-        //         {
-        //             "uuid": playerOneUUID,
-        //             "dir": nextDirection
-        //         }
-        //     ]
-        // }))
     }
-    // console.log(nextDirection)
     if (success) {
         // text("Connectedu successfurry", 0, 0)
     }
@@ -228,18 +213,6 @@ function connectSocket() {
     socket = new WebSocket("ws://"+serverIP)
     socket.onopen = () => {
         success = true
-        // socket.send(JSON.stringify({
-        //     "type": "newplayer",
-        //     "uuid": playerOneUUID,
-        //     "color": "#FF0000",
-        //     "name": "Mayyy lmao"
-        // }))
-        // socket.send(JSON.stringify({
-        //     "type": "newplayer",
-        //     "uuid": genUuid(),
-        //     "color": "#0000FF",
-        //     "name": "Mayyy 2"
-        // }))
     }
     socket.onmessage = e => {
         gameData = JSON.parse(e.data)
@@ -285,6 +258,10 @@ function makeNewPlayer(name, color, controls) {
             nextMove: ""
         }
     }
+}
+
+function smallerDim() {
+    return windowHeight < windowWidth ? windowHeight : windowWidth
 }
 
 function sendPlayerToServer(player) {
