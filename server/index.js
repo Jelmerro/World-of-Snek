@@ -1,5 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
+* Copyright (C) 2019 M4Yt
 * Copyright (C) 2019 Jelmer van Arnhem
 *
 * This program is free software: you can redistribute it and/or modify
@@ -31,6 +32,7 @@ const INITIALLENGTH = 200
 const INITIALSIZE = 20
 const SHRINKTIMEOUT = 10000000000 // 10 seconds - in nanoseconds
 const SHRINKSPEED = 10000000000 // 10 seconds - in nanoseconds
+const READYCOUNTDOWN = 3000000000 // 3 seconds - in nanoseconds
 const rotationToDirection = r => {
     if (Math.sin(r) > 0 && Math.sin(r) > Math.abs(Math.cos(r))) {
         return "down"
@@ -464,7 +466,7 @@ const startGame = autotrigger => {
         }
         return
     }
-    game.countdown = 1000000000 // 1 second - in nanoseconds
+    game.countdown = READYCOUNTDOWN
     console.log("starting a new game with these players:", game.players)
     game.settings = JSON.parse(JSON.stringify(settings))
     if (game.settings.areaShape === "random") {
@@ -726,13 +728,13 @@ const gameloop = delta => {
     }
     if (game.state === "ready") {
         if (game.countdown < 0) {
-            game.countdown = 1000000000 // 1 second - in nanoseconds
+            game.countdown = READYCOUNTDOWN
             game.state = "game"
         }
     }
     if (game.state === "lobby") {
         if (game.countdown < 0) {
-            game.countdown = 1000000000 // 1 second - in nanoseconds
+            game.countdown = READYCOUNTDOWN
             startGame(true)
         }
     }
@@ -762,6 +764,7 @@ const informClients = () => {
             if (c.socket) {
                 c.socket.send(JSON.stringify({
                     state: "lobby",
+                    countdown: game.countdown,
                     players: players,
                     lastwinner: game.lastwinner
                 }))
