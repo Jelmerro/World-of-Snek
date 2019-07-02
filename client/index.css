@@ -2,8 +2,44 @@ body {
     margin: 0;
     overflow: hidden;
 }
+
+#player-list {
+    position: absolute;
+    left: 0;
+    height: 100%;
+    /* align-items: center; */
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(255, 255, 255, .1);
+    color: #FFF
+}
+
+.player {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: .5em;
+}
+
+.player > * {
+    padding: .5em;
+}
+
+.blob {
+    width: 2em;
+    height: 2em;
+}
+
+.square {
+    border-radius: 0;
+}
+
+.cirlce {
+    border-radius: 50%;
+}
 /* Modals */
-.modal {
+/* .modal {
     display: none;
     position: fixed;
     z-index: 3;
@@ -30,4 +66,4 @@ body {
     transition: max-height 0.4s;
     overflow: hidden;
     max-height: 0;
-}
+} */
