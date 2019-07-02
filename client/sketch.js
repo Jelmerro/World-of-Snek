@@ -21,7 +21,7 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight */
+strokeWeight renderPlayers showPlayerList hidePlayerlist*/
 
 let socket, serverIP
 let success
@@ -29,7 +29,7 @@ let gameData = {
     state: "connecting"
 }
 let windowScale = 1
-let dynamicScaling = true
+let dynamicScaling = false
 let lastCenter = [0, 0]
 const players = []
 
@@ -49,7 +49,8 @@ const exampleControls2 = {
 
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
-    serverIP = prompt("Enter server IP")
+    // serverIP = prompt("Enter server IP")
+    serverIP = "localhost:3000"
     // try to connect websocket
     try {
         connectSocket()
@@ -74,6 +75,7 @@ function draw() {
     translate(windowWidth/2, windowHeight/2)
     // center circle
     circle(0, 0, 5)
+    hidePlayerlist()
     if (gameData.state === "connecting") {
         text("Ze blutüth device is ready to pair", 0, 0)
     }
@@ -155,9 +157,12 @@ function draw() {
         noStroke()
         // draw food
         gameData.food.forEach(food => {
-            fill("#ffffff")
+            fill(255)
             circle(food.x, food.y, food.r*2)
         })
+        // show players in list
+        showPlayerList()
+        renderPlayers(gameData.players)
         // draw players
         gameData.players.forEach(player => {
             // make rainbow option and other magic words
@@ -224,20 +229,6 @@ function connectSocket() {
             connectSocket()
         }
     }
-}
-
-function openModal(id) {
-    const modal = document.getElementById(id)
-    modal.style.display = "flex"
-    const content = modal.children[0]
-    content.style.maxHeight = content.scrollHeight+"px"
-}
-
-function closeModal(id) {
-    const modal = document.getElementById(id)
-    const content = modal.children[0]
-    modal.style.display = "none"
-    content.style.maxHeight = "0"
 }
 
 // Make players with name, color, and preferred controls for up/down/left/right
