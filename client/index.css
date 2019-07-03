@@ -11,14 +11,16 @@ body {
     justify-content: center;
     display: flex;
     flex-direction: column;
-    background-color: rgba(255, 255, 255, .1);
-    color: #FFF
+    color: #FFF;
 }
 
 .player {
     display: flex;
     flex-direction: row;
     align-items: center;
+    background-color: rgba(255, 255, 255, .1);
+    max-width: 24em;
+    flex-wrap: wrap;
     padding: .5em;
 }
 
@@ -29,6 +31,14 @@ body {
 .blob {
     width: 2em;
     height: 2em;
+}
+
+.name {
+    flex-grow: 1;
+    max-width: 8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .square {
