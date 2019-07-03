@@ -24,7 +24,6 @@
 const playerlist = document.getElementById("player-list")
 const menu = document.getElementById("menu")
 let menuModal
-let menuOpen = false
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
@@ -39,42 +38,35 @@ window.addEventListener("keydown", e => {
     if (key !== 27) {
         return
     }
-    if (menuOpen) {
+    if (menuModal.isOpen) {
         menuModal.close()
     } else {
         menuModal.open()
     }
-    menuOpen = !menuOpen
 })
 
-// function openModal(id) {
-//     const modal = document.getElementById(id)
-//     modal.style.display = "flex"
-//     const content = modal.children[0]
-//     content.style.maxHeight = content.scrollHeight+"px"
-// }
-//
-// function closeModal(id) {
-//     const modal = document.getElementById(id)
-//     const content = modal.children[0]
-//     modal.style.display = "none"
-//     content.style.maxHeight = "0"
-// }
+function emptyElement(element) {
+    while (element.firstChild) {
+        element.removeChild(element.firstChild)
+    }
+}
 
-function playerHTML(player) {
-    return `
-    <div class="player">
-        <div class="blob ${player.shape}" style="background-color:${player.color};"></div>
-        <div class="name">${player.name}</div>
-        <div class="wins">Wins: ${player.wins}</div>
-        <div class="score">Score: ${player.score}</div>
-    </div>`
+function playerElement(player) {
+    const element = document.createElement("div")
+    element.className = "player"
+    element.innerHTML =  `
+    <div class="blob ${player.shape}" style="background-color:${player.color};">
+    </div>
+    <div class="name">${player.name}</div>
+    <div class="wins">Wins: ${player.wins}</div>
+    <div class="score">Score: ${player.score}</div>`
+    return element
 }
 
 function renderPlayers(players) {
-    playerlist.innerHTML = ""
+    emptyElement(playerlist)
     players.forEach(player => {
-        playerlist.innerHTML += playerHTML(player)
+        playerlist.appendChild(playerElement(player))
     })
 }
 
