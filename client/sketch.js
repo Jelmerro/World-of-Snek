@@ -82,6 +82,15 @@ function draw() {
     if (gameData.state === "ready") {
         const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
         // dividing to get seconds from nanoseconds
+        scaleGame()
+        drawAreas()
+        drawFood()
+        drawPlayers()
+        // show players in list
+        showPlayerList()
+        renderPlayers(gameData.players)
+        scale(1, -1) // flip y back to render text
+        fill(255)
         translate(0, 64-windowHeight/2)
         text("Get ready!", 0, 16)
         translate(0, 80)
@@ -99,6 +108,12 @@ function draw() {
         // dividing to get seconds from nanoseconds
         translate(0, 64-windowHeight/2)
         text(`Welcome to the lobby! Next game in ${countdown}s`, 0, 16)
+        translate(0, 120)
+        if (gameData.lastwinner) {
+            text(`${gameData.lastwinner.name} won this round!`, 0, 16)
+        } else {
+            text("It's a draw!", 0, 16)
+        }
         gameData.players.forEach(player => {
             translate(0, 80)
             fill(player.color)
@@ -110,74 +125,12 @@ function draw() {
         })
     }
     if (gameData.state === "game") {
-        if (dynamicScaling) {
-            windowScale = smallerDim() / (gameData.area.current.r * 2)
-            const [oldX, oldY] = lastCenter
-            const [x, y] = [gameData.area.current.x, gameData.area.current.y]
-            const [deltaX, deltaY] = [x - oldX, y - oldY]
-            translate(deltaX, -deltaY) // flipped y?
-            lastCenter = [x, y]
-        } else {
-            windowScale = smallerDim() / (gameData.area.init.r * 2)
-        }
-        scale(windowScale, -windowScale) // negative to flip y axis
-        noFill()
-        strokeWeight(2)
-        // draw initial area
-        const initialArea = gameData.area.init
-        stroke("#777777")
-        if (gameData.area.shape === "square") {
-            // TODO: set color and stuff
-            square(initialArea.x, initialArea.y, initialArea.r*2)
-        } else if (gameData.area.shape === "circle") {
-            circle(initialArea.x, initialArea.y, initialArea.r*2)
-        }
-        // draw new area
-        const newArea = gameData.area.new
-        stroke("blue")
-        if (newArea.x) {
-            if (gameData.area.shape === "square") {
-                square(newArea.x, newArea.y, newArea.r*2)
-            } else if (gameData.area.shape === "circle") {
-                circle(newArea.x, newArea.y, newArea.r*2)
-            }
-        }
-        // draw current area
-        const currentArea = gameData.area.current
-        if (gameData.wrap) {
-            stroke("green")
-        } else {
-            stroke("red")
-        }
-        if (gameData.area.shape === "square") {
-            square(currentArea.x, currentArea.y, currentArea.r*2)
-        } else if (gameData.area.shape === "circle") {
-            circle(currentArea.x, currentArea.y, currentArea.r*2)
-        }
-        noStroke()
-        // draw food
-        gameData.food.forEach(food => {
-            fill(255)
-            circle(food.x, food.y, food.r*2)
-        })
-        // show players in list
+        scaleGame()
+        drawAreas()
+        drawFood()
         showPlayerList()
         renderPlayers(gameData.players)
-        // draw players
-        gameData.players.forEach(player => {
-            // make rainbow option and other magic words
-            fill(player.color)
-            if (!player.alive) {
-                fill("#777777")
-            }
-            player.position.forEach(position => {
-                if (player.shape === "square") {
-                    square(position[0], position[1], player.size*2)
-                } else if (player.shape === "circle") {
-                    circle(position[0], position[1], player.size*2)
-                }
-            })
-        })
+        drawPlayers()
         // send player moves to server
         const moves = []
         players.forEach(player => {
@@ -274,4 +227,79 @@ function sendMovesToServer(moves) {
         type: "movement",
         moves: moves
     }))
+}
+
+function drawAreas() {
+    noFill()
+    strokeWeight(2)
+    // draw initial area
+    const initialArea = gameData.area.init
+    stroke("#777777")
+    if (gameData.area.shape === "square") {
+        // TODO: set color and stuff
+        square(initialArea.x, initialArea.y, initialArea.r*2)
+    } else if (gameData.area.shape === "circle") {
+        circle(initialArea.x, initialArea.y, initialArea.r*2)
+    }
+    // draw new area
+    const newArea = gameData.area.new
+    stroke("blue")
+    if (newArea.x) {
+        if (gameData.area.shape === "square") {
+            square(newArea.x, newArea.y, newArea.r*2)
+        } else if (gameData.area.shape === "circle") {
+            circle(newArea.x, newArea.y, newArea.r*2)
+        }
+    }
+    // draw current area
+    const currentArea = gameData.area.current
+    if (gameData.wrap) {
+        stroke("green")
+    } else {
+        stroke("red")
+    }
+    if (gameData.area.shape === "square") {
+        square(currentArea.x, currentArea.y, currentArea.r*2)
+    } else if (gameData.area.shape === "circle") {
+        circle(currentArea.x, currentArea.y, currentArea.r*2)
+    }
+    noStroke()
+}
+
+function scaleGame() {
+    if (dynamicScaling) {
+        windowScale = smallerDim() / (gameData.area.current.r * 2)
+        const [oldX, oldY] = lastCenter
+        const [x, y] = [gameData.area.current.x, gameData.area.current.y]
+        const [deltaX, deltaY] = [x - oldX, y - oldY]
+        translate(deltaX, -deltaY) // flipped y?
+        lastCenter = [x, y]
+    } else {
+        windowScale = smallerDim() / (gameData.area.init.r * 2)
+    }
+    scale(windowScale, -windowScale) // negative to flip y axis
+}
+
+function drawPlayers() {
+    gameData.players.forEach(player => {
+        // make rainbow option and other magic words
+        fill(player.color)
+        if (!player.alive) {
+            fill("#777777")
+        }
+        player.position.forEach(position => {
+            if (player.shape === "square") {
+                square(position[0], position[1], player.size*2)
+            } else if (player.shape === "circle") {
+                circle(position[0], position[1], player.size*2)
+            }
+        })
+    })
+}
+
+function drawFood() {
+    gameData.food.forEach(food => {
+        fill(255)
+        circle(food.x, food.y, food.r*2)
+    })
 }

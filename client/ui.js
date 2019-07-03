@@ -19,22 +19,47 @@
 "use strict"
 
 // hmm lekker uitje
+/* global M */
 
 const playerlist = document.getElementById("player-list")
+const menu = document.getElementById("menu")
+let menuModal
+let menuOpen = false
 
-function openModal(id) {
-    const modal = document.getElementById(id)
-    modal.style.display = "flex"
-    const content = modal.children[0]
-    content.style.maxHeight = content.scrollHeight+"px"
-}
+// init modals
+document.addEventListener("DOMContentLoaded", () => {
+    const elems = document.querySelectorAll(".modal")
+    const instances = M.Modal.init(elems, {dismissible: false})
+    menuModal = M.Modal.getInstance(menu)
+})
 
-function closeModal(id) {
-    const modal = document.getElementById(id)
-    const content = modal.children[0]
-    modal.style.display = "none"
-    content.style.maxHeight = "0"
-}
+window.addEventListener("keydown", e => {
+    const key = e.keyCode
+    // esc opens and closes menu
+    if (key !== 27) {
+        return
+    }
+    if (menuOpen) {
+        menuModal.close()
+    } else {
+        menuModal.open()
+    }
+    menuOpen = !menuOpen
+})
+
+// function openModal(id) {
+//     const modal = document.getElementById(id)
+//     modal.style.display = "flex"
+//     const content = modal.children[0]
+//     content.style.maxHeight = content.scrollHeight+"px"
+// }
+//
+// function closeModal(id) {
+//     const modal = document.getElementById(id)
+//     const content = modal.children[0]
+//     modal.style.display = "none"
+//     content.style.maxHeight = "0"
+// }
 
 function playerHTML(player) {
     return `
