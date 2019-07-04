@@ -19,6 +19,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>World of Snek</title>
+	<meta charset="utf-8" />
     <link href="materialize.min.css" rel="stylesheet" type="text/css">
     <link href="index.css" rel="stylesheet" type="text/css">
 </head>
@@ -30,7 +32,25 @@
     <!-- Modals -->
     <div id="menu" class="modal">
         <div class="modal-content">
-            <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            <h3>Menu</h3>
+            <h5>Server</h5>
+            <div id="server-settings">
+
+            </div>
+            <h5>Local players</h5>
+            <div id="player-settings">
+
+            </div>
+            <h5>Settings</h5>
+            <div id="general-settings">
+                <label for="dynamic-scaling">Dynamic area scaling (experimental)</label>
+                <div class="switch">
+                    <label>
+                        <input type="checkbox" id="dynamic-scaling">
+                        <span class="lever"></span>
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
     <div id="connect-modal" class="modal">
@@ -48,6 +68,7 @@
                 </div>
             </div>
             <button id="connect" class="btn waves-effect waves-light">Connect</button>
+            <button id="close-connect" class="btn waves-effect waves-light">Cancel</button>
         </div>
     </div>
     <script src="p5.min.js"></script>

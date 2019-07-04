@@ -18,11 +18,11 @@
 
 "use strict"
 
-/* global players */
+/* global localPlayers */
 
 window.addEventListener("keydown", e => {
     const key = e.keyCode
-    players.forEach(player => {
+    localPlayers.forEach(player => {
         if (player.controls.up === key) {
             player.controls.upPressed =  true
         }
@@ -40,7 +40,7 @@ window.addEventListener("keydown", e => {
 
 window.addEventListener("keyup", e => {
     const key = e.keyCode
-    players.forEach(player => {
+    localPlayers.forEach(player => {
         if (player.controls.up === key) {
             player.controls.upPressed =  false
         }

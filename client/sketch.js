@@ -21,19 +21,19 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight renderPlayers showPlayerList hidePlayerlist preferredServer
-preferredPort connectModal M */
+strokeWeight renderPlayers showPlayerList hidePlayerlist preferredIP
+preferredPort connectModal M updateServerSettings updatePlayerSettings
+dynamicScaling */
 
 let socket, serverIP, serverPort
+const defaultIP = location.hostname || "localhost"
 const defaultPort = 3000
-let success
 let gameData = {
     state: "connecting"
 }
 let windowScale = 1
-let dynamicScaling = false
 let lastCenter = [0, 0]
-const players = []
+const localPlayers = []
 
 const exampleControls = {
     up: 38,
@@ -58,8 +58,8 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    players.push(makeNewPlayer("May", "orange", exampleControls))
-    players.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
+    localPlayers.push(makeNewPlayer("May", "orange", exampleControls))
+    localPlayers.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
 }
 
 function windowResized() {
@@ -92,7 +92,7 @@ function draw() {
         renderPlayers(gameData.players)
         scale(1, -1) // flip y back to render text
         fill(255)
-        translate(0, 64-windowHeight/2)
+        translate(0, -40)
         text("Get ready!", 0, 16)
         translate(0, 80)
         if (countdown > 2) {
@@ -121,7 +121,7 @@ function draw() {
             const winOrWins = player.wins === 1 ? "win" : "wins"
             text(`${player.name} - ${player.wins} ${winOrWins}`, 0, 16)
         })
-        players.forEach(player => {
+        localPlayers.forEach(player => {
             sendPlayerToServer(player)
         })
     }
@@ -134,7 +134,7 @@ function draw() {
         drawPlayers()
         // send player moves to server
         const moves = []
-        players.forEach(player => {
+        localPlayers.forEach(player => {
             player.controls.nextMove = ""
             if (player.controls.upPressed) {
                 player.controls.nextMove = "up"
@@ -155,9 +155,6 @@ function draw() {
         })
         sendMovesToServer(moves)
     }
-    if (success) {
-        // text("Connectedu successfurry", 0, 0)
-    }
 }
 
 /* this function was made by broofa and is licensed under cc by-sa 3.0
@@ -169,11 +166,13 @@ function genUuid() {
 }
 
 function connectSocket() {
-    serverIP = preferredServer || location.hostname || "localhost"
+    serverIP = preferredIP || defaultIP
     serverPort = preferredPort || defaultPort
     socket = new WebSocket(`ws://${serverIP}:${serverPort}`)
     socket.onopen = () => {
-        success = true
+        gameData.state = "connected"
+        updateServerSettings()
+        updatePlayerSettings()
     }
     socket.onmessage = e => {
         gameData = JSON.parse(e.data)
@@ -182,6 +181,8 @@ function connectSocket() {
         gameData.state = "connecting"
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
+        updateServerSettings()
+        updatePlayerSettings()
     }
 }
 
