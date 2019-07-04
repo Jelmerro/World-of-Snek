@@ -21,9 +21,11 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight renderPlayers showPlayerList hidePlayerlist*/
+strokeWeight renderPlayers showPlayerList hidePlayerlist preferredServer
+preferredPort connectModal M */
 
-let socket, serverIP
+let socket, serverIP, serverPort
+const defaultPort = 3000
 let success
 let gameData = {
     state: "connecting"
@@ -49,13 +51,12 @@ const exampleControls2 = {
 
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
-    // serverIP = prompt("Enter server IP")
-    serverIP = "localhost:3000"
     // try to connect websocket
     try {
         connectSocket()
     } catch (e) {
-        alert("Cannot connect to server")
+        M.toast({html: "Failed to connect to server"})
+        connectModal.open()
     }
     players.push(makeNewPlayer("May", "orange", exampleControls))
     players.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
@@ -168,7 +169,9 @@ function genUuid() {
 }
 
 function connectSocket() {
-    socket = new WebSocket("ws://"+serverIP)
+    serverIP = preferredServer || location.hostname || "localhost"
+    serverPort = preferredPort || defaultPort
+    socket = new WebSocket(`ws://${serverIP}:${serverPort}`)
     socket.onopen = () => {
         success = true
     }
@@ -176,11 +179,9 @@ function connectSocket() {
         gameData = JSON.parse(e.data)
     }
     socket.onclose = () => {
-        alert("closed")
         gameData.state = "connecting"
-        if (confirm("reconnect to " + serverIP + "?")) {
-            connectSocket()
-        }
+        M.toast({html: "Failed to connect to server"})
+        connectModal.open()
     }
 }
 

@@ -19,17 +19,25 @@
 "use strict"
 
 // hmm lekker uitje
-/* global M */
+/* global M connectSocket */
 
 const playerlist = document.getElementById("player-list")
 const menu = document.getElementById("menu")
 let menuModal
+const connect = document.getElementById("connect-modal")
+let connectModal
+const connectButton = document.getElementById("connect")
+const ipField = document.getElementById("server-ip")
+const portField = document.getElementById("server-port")
+let preferredServer
+let preferredPort
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
     const elems = document.querySelectorAll(".modal")
     const instances = M.Modal.init(elems, {dismissible: false})
     menuModal = M.Modal.getInstance(menu)
+    connectModal = M.Modal.getInstance(connect)
 })
 
 window.addEventListener("keydown", e => {
@@ -44,6 +52,25 @@ window.addEventListener("keydown", e => {
         menuModal.open()
     }
 })
+
+ipField.addEventListener("keydown", e => {
+    const key = e.keyCode
+    // if a colon is typed, go to port field
+    if (key !== 186) {
+        return
+    }
+    e.preventDefault()
+    portField.focus()
+})
+
+connectButton.addEventListener("click", connectFromModal)
+
+function connectFromModal() {
+    preferredServer = ipField.value
+    preferredPort = portField.value
+    connectSocket()
+    connectModal.close()
+}
 
 function emptyElement(element) {
     while (element.firstChild) {
