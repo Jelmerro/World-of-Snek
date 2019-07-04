@@ -33,10 +33,20 @@
             <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
         </div>
     </div>
-    <div id="connect" class="modal">
+    <div id="connect-modal" class="modal">
         <div class="modal-content">
-            <label for="server-ip">Server IP</label>
-            <input id= "server-ip" type="text">
+            <h3>Connect to a server</h3>
+            <p>Leave fields empty for defaults</p>
+            <div class="row">
+                <div class="input-field col s8">
+                    <input id= "server-ip" type="text">
+                    <label for="server-ip">Server IP</label>
+                </div>
+                <div class="input-field col s4">
+                    <input id= "server-port" type="text">
+                    <label for="server-port">Server port</label>
+                </div>
+            </div>
             <button id="connect" class="btn waves-effect waves-light">Connect</button>
         </div>
     </div>
