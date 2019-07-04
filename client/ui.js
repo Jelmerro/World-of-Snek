@@ -19,7 +19,7 @@
 "use strict"
 
 // hmm lekker uitje
-/* global M connectSocket */
+/* global M connectSocket gameData serverIP serverPort localPlayers */
 
 const playerlist = document.getElementById("player-list")
 const menu = document.getElementById("menu")
@@ -27,10 +27,15 @@ let menuModal
 const connect = document.getElementById("connect-modal")
 let connectModal
 const connectButton = document.getElementById("connect")
+const closeConnect = document.getElementById("close-connect")
 const ipField = document.getElementById("server-ip")
 const portField = document.getElementById("server-port")
-let preferredServer
+let preferredIP
 let preferredPort
+const serverSettings = document.getElementById("server-settings")
+const playerSettings = document.getElementById("player-settings")
+let dynamicScaling = false
+const scalingControl = document.getElementById("dynamic-scaling")
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
@@ -49,6 +54,8 @@ window.addEventListener("keydown", e => {
     if (menuModal.isOpen) {
         menuModal.close()
     } else {
+        updateServerSettings()
+        updatePlayerSettings()
         menuModal.open()
     }
 })
@@ -63,12 +70,46 @@ ipField.addEventListener("keydown", e => {
     portField.focus()
 })
 
+ipField.addEventListener("input", () => {
+    // if an IP with port is pasted, put them in the right fields
+    const parts = ipField.value.split(":")
+    if (parts.length > 1) {
+        portField.value = parts[1]
+        ipField.value = parts[0]
+        M.updateTextFields()
+    }
+})
+
+connect.addEventListener("keydown", e => {
+    const key = e.keyCode
+    // if enter is pressed within connect modal, submit field inputs
+    if (key === 13) {
+        connectFromModal()
+    }
+    // if esc is pressed, close the modal
+    if (key === 27) {
+        closeConnectModal()
+        // prevent the menuModal trigger
+        e.stopPropagation()
+    }
+})
+
 connectButton.addEventListener("click", connectFromModal)
 
+closeConnect.addEventListener("click", closeConnectModal)
+
+scalingControl.addEventListener("change", () => {
+    dynamicScaling = scalingControl.checked
+})
+
 function connectFromModal() {
-    preferredServer = ipField.value
+    preferredIP = ipField.value
     preferredPort = portField.value
     connectSocket()
+    connectModal.close()
+}
+
+function closeConnectModal() {
     connectModal.close()
 }
 
@@ -103,4 +144,41 @@ function showPlayerList() {
 
 function hidePlayerlist() {
     playerlist.style.display = "none"
+}
+
+function updateServerSettings() {
+    emptyElement(serverSettings)
+    const serverInfo = document.createElement("div")
+    if (gameData.state === "connecting") {
+        serverInfo.textContent = "Not connected"
+    } else {
+        serverInfo.textContent = `Connected to ${serverIP}:${serverPort}`
+    }
+    serverSettings.appendChild(serverInfo)
+    const button = document.createElement("button")
+    button.textContent = "Change"
+    button.classList.add("btn", "waves-effect", "waves-light")
+    button.addEventListener("click", () => {
+        connectModal.open()
+    })
+    serverSettings.appendChild(button)
+}
+
+function updatePlayerSettings() {
+    emptyElement(playerSettings)
+    localPlayers.forEach(player => {
+        const element = document.createElement("div")
+        element.innerHTML =  `
+        <div class="blob" style="background-color:${player.color};"></div>
+        <div>${player.name}</div>
+        <div>Controls: ????</div>`
+        playerSettings.appendChild(element)
+    })
+    const addButton = document.createElement("button")
+    addButton.textContent = "Add player"
+    addButton.classList.add("btn", "waves-effect", "waves-light")
+    if (gameData.state === "connecting") {
+        addButton.setAttribute("disabled", "disabled")
+    }
+    playerSettings.appendChild(addButton)
 }
