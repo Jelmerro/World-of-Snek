@@ -21,9 +21,9 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight renderPlayers showPlayerList hidePlayerlist preferredIP
+strokeWeight updatePlayerList showPlayerList hidePlayerlist preferredIP
 preferredPort connectModal M updateServerSettings updatePlayerSettings
-dynamicScaling */
+dynamicScaling maxEntities */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"
@@ -33,6 +33,7 @@ let gameData = {
 }
 let windowScale = 1
 let lastCenter = [0, 0]
+let totalEntities
 const localPlayers = []
 
 const exampleControls = {
@@ -76,35 +77,12 @@ function draw() {
     translate(windowWidth/2, windowHeight/2)
     // center circle
     circle(0, 0, 5)
-    hidePlayerlist()
     if (gameData.state === "connecting") {
+        hidePlayerlist()
         text("Ze blutüth device is ready to pair", 0, 0)
     }
-    if (gameData.state === "ready") {
-        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
-        // dividing to get seconds from nanoseconds
-        scaleGame()
-        drawAreas()
-        drawFood()
-        drawPlayers()
-        // show players in list
-        showPlayerList()
-        renderPlayers(gameData.players)
-        scale(1, -1) // flip y back to render text
-        fill(255)
-        translate(0, -40)
-        text("Get ready!", 0, 16)
-        translate(0, 80)
-        if (countdown > 2) {
-            fill("green")
-        } else if (countdown > 1) {
-            fill("orange")
-        } else {
-            fill("red")
-        }
-        text(countdown, 0, 16)
-    }
     if (gameData.state === "lobby") {
+        hidePlayerlist()
         const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
         // dividing to get seconds from nanoseconds
         translate(0, 64-windowHeight/2)
@@ -125,12 +103,38 @@ function draw() {
             sendPlayerToServer(player)
         })
     }
+    if (gameData.state === "ready") {
+        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
+        // dividing to get seconds from nanoseconds
+        scaleGame()
+        drawAreas()
+        drawFood()
+        drawPlayers()
+        // show players in list
+        showPlayerList()
+        updatePlayerList(gameData.players)
+        scale(1, -1) // flip y back to render text
+        const scaledSize = gameData.area.init.r/10
+        textSize(scaledSize)
+        fill(255)
+        translate(0, -scaledSize*.5)
+        text("Get ready!", 0, 16)
+        translate(0, scaledSize)
+        if (countdown > 2) {
+            fill("green")
+        } else if (countdown > 1) {
+            fill("orange")
+        } else {
+            fill("red")
+        }
+        text(countdown, 0, 16)
+    }
     if (gameData.state === "game") {
         scaleGame()
         drawAreas()
         drawFood()
         showPlayerList()
-        renderPlayers(gameData.players)
+        updatePlayerList(gameData.players)
         drawPlayers()
         // send player moves to server
         const moves = []
@@ -274,7 +278,7 @@ function scaleGame() {
         const [oldX, oldY] = lastCenter
         const [x, y] = [gameData.area.current.x, gameData.area.current.y]
         const [deltaX, deltaY] = [x - oldX, y - oldY]
-        translate(deltaX, -deltaY) // flipped y?
+        translate(deltaX, deltaY)
         lastCenter = [x, y]
     } else {
         windowScale = smallerDim() / (gameData.area.init.r * 2)
@@ -283,13 +287,23 @@ function scaleGame() {
 }
 
 function drawPlayers() {
+    totalEntities = 0
+    gameData.players.forEach(player => {
+        totalEntities += player.position.length
+    })
+    console.log(`less total than max? ${totalEntities < maxEntities}`)
+    const drawFactor = Math.ceil(totalEntities/maxEntities)
+    console.log(`factor: ${drawFactor}`)
     gameData.players.forEach(player => {
         // make rainbow option and other magic words
         fill(player.color)
         if (!player.alive) {
             fill("#777777")
         }
-        player.position.forEach(position => {
+        player.position.forEach((position, i) => {
+            if (i % drawFactor !== 0) {
+                return
+            }
             if (player.shape === "square") {
                 square(position[0], position[1], player.size*2)
             } else if (player.shape === "circle") {
