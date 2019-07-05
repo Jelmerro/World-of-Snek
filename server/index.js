@@ -361,7 +361,7 @@ const defaultSetings = {
     powerupsDespawn: "random", //random, fast, slow, never (not on random)
     foodCount: "random", //random, 1, players
     gamemode: "random", //random, lastalive, score
-    port: 3000
+    port: 7635
 }
 const settings = JSON.parse(JSON.stringify(defaultSetings))
 if (args.maxPlayers && Number(args.maxPlayers) > 1) {
