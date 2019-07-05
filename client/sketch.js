@@ -27,7 +27,7 @@ dynamicScaling */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"
-const defaultPort = 3000
+const defaultPort = 7635
 let gameData = {
     state: "connecting"
 }
