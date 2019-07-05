@@ -36,6 +36,10 @@ const serverSettings = document.getElementById("server-settings")
 const playerSettings = document.getElementById("player-settings")
 let dynamicScaling = false
 const scalingControl = document.getElementById("dynamic-scaling")
+let maxEntities = 500
+const maxEntitiesControl = document.getElementById("max-entities")
+
+let lastPlayers
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
@@ -102,6 +106,10 @@ scalingControl.addEventListener("change", () => {
     dynamicScaling = scalingControl.checked
 })
 
+maxEntitiesControl.addEventListener("change", () => {
+    maxEntities = maxEntitiesControl.value
+})
+
 function connectFromModal() {
     preferredIP = ipField.value
     preferredPort = portField.value
@@ -131,19 +139,38 @@ function playerElement(player) {
     return element
 }
 
-function renderPlayers(players) {
-    emptyElement(playerlist)
-    players.forEach(player => {
-        playerlist.appendChild(playerElement(player))
+function updatePlayerList(players) {
+    const newPlayers = filterPlayerData(players)
+    if (JSON.stringify(lastPlayers) !== JSON.stringify(newPlayers)) {
+        emptyElement(playerlist)
+        players.forEach(player => {
+            playerlist.appendChild(playerElement(player))
+        })
+    }
+    lastPlayers = newPlayers
+}
+
+function filterPlayerData(players) {
+    return players.map(player => {
+        // filter to only info that is relevant to updating playerlist
+        return {
+            shape: player.shape,
+            score: player.score,
+            wins: player.wins
+        }
     })
 }
 
 function showPlayerList() {
-    playerlist.style.display = "flex"
+    if (playerlist.style.display !== "flex") {
+        playerlist.style.display = "flex"
+    }
 }
 
 function hidePlayerlist() {
-    playerlist.style.display = "none"
+    if (playerlist.style.display !== "none") {
+        playerlist.style.display = "none"
+    }
 }
 
 function updateServerSettings() {
@@ -168,6 +195,7 @@ function updatePlayerSettings() {
     emptyElement(playerSettings)
     localPlayers.forEach(player => {
         const element = document.createElement("div")
+        element.classList.add("player")
         element.innerHTML =  `
         <div class="blob" style="background-color:${player.color};"></div>
         <div>${player.name}</div>
