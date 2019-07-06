@@ -1,7 +1,7 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019 M4Yt
 * Copyright (C) 2019 Jelmer van Arnhem
+* Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ const INITIALSIZE = 20
 const SHRINKTIMEOUT = 10000000000 // 10 seconds - in nanoseconds
 const SHRINKSPEED = 10000000000 // 10 seconds - in nanoseconds
 const READYCOUNTDOWN = 3000000000 // 3 seconds - in nanoseconds
+const LOBBYCOUNTDOWN = 10000000000 // 10 seconds - in nanoseconds
 const rotationToDirection = r => {
     if (Math.sin(r) > 0 && Math.sin(r) > Math.abs(Math.cos(r))) {
         return "down"
@@ -279,7 +280,7 @@ const generateNewArea = () => {
     }
 }
 const shiftArea = () => {
-    game.area.current = game.area.new
+    game.area.current = Object.assign({}, game.area.new)
     game.area.new = {}
     for (const player of game.players) {
         if (game.state !== "game") {
@@ -317,8 +318,8 @@ const updateFood = () => {
                 y = game.area.current.y + game.area.current.r * Math.sin(Math.random() * TAU)
             }
             if (game.area.shape === "square") {
-                x = game.area.current.x + game.area.current.r * Math.random()
-                y = game.area.current.x + game.area.current.r * Math.random()
+                x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
+                y = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
             }
             collision = false
             for (const player of game.players) {
@@ -420,7 +421,7 @@ const clients = []
 // game will be filled with proper data when starting a new game
 const game = {
     state: "lobby",
-    countdown: 30000000000, // 30 seconds - in nanoseconds
+    countdown: LOBBYCOUNTDOWN,
     players: [],
     area: {
         init: {},
@@ -460,7 +461,7 @@ const startGame = autotrigger => {
     })
     if (game.players.length < 2) {
         if (autotrigger) {
-            game.countdown = 30000000000 // 30 seconds - in nanoseconds
+            game.countdown = LOBBYCOUNTDOWN
         } else {
             console.log("not enough players to start")
         }
@@ -498,6 +499,7 @@ const startGame = autotrigger => {
     }
     game.area.init.r = game.players.length * AREASIZE
     game.area.current = Object.assign({}, game.area.init)
+    game.area.new = {}
     if (game.settings.playerShape === "circle") {
         game.players.forEach((p, index) => {
             const startRotation = TAU / game.players.length * index
@@ -558,7 +560,7 @@ const startGame = autotrigger => {
 
 const stopGame = () => {
     console.log("game has ended")
-    game.countdown = 30000000000 // 30 seconds - in nanoseconds
+    game.countdown = LOBBYCOUNTDOWN
     game.state = "lobby"
 }
 
@@ -617,17 +619,18 @@ const processMessage = (clientId, message) => {
 }
 const announceWinner = player => {
     if (player) {
-        clients.forEach(c => {
+        for (const c of clients) {
             const winners = c.players.filter(p => p.uuid === player.uuid)
             if (winners.length === 1) {
                 winners[0].wins += 1
                 game.lastwinner = winners[0]
                 console.log("the winner is:", winners[0])
+                break
             } else {
                 console.log("it's a draw")
                 game.lastwinner = null
             }
-        })
+        }
     } else {
         console.log("it's a draw")
         game.lastwinner = null
@@ -748,9 +751,11 @@ const informClients = () => {
             filteredGame.countdown = undefined
         }
         clients.forEach(c => {
-            if (c.socket) {
-                c.socket.send(JSON.stringify(filteredGame))
-            }
+            setTimeout(() => {
+                if (c.socket) {
+                    c.socket.send(JSON.stringify(filteredGame))
+                }
+            }, 0)
         })
     }
     if (game.state === "lobby") {
@@ -761,14 +766,16 @@ const informClients = () => {
             })
         })
         clients.forEach(c => {
-            if (c.socket) {
-                c.socket.send(JSON.stringify({
-                    state: "lobby",
-                    countdown: game.countdown,
-                    players: players,
-                    lastwinner: game.lastwinner
-                }))
-            }
+            setTimeout(() => {
+                if (c.socket) {
+                    c.socket.send(JSON.stringify({
+                        state: "lobby",
+                        countdown: game.countdown,
+                        players: players,
+                        lastwinner: game.lastwinner
+                    }))
+                }
+            }, 0)
         })
     }
 }
