@@ -318,8 +318,8 @@ const updateFood = () => {
                 y = game.area.current.y + game.area.current.r * Math.sin(Math.random() * TAU)
             }
             if (game.area.shape === "square") {
-                x = game.area.current.x + game.area.current.r * Math.random()
-                y = game.area.current.x + game.area.current.r * Math.random()
+                x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
+                y = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
             }
             collision = false
             for (const player of game.players) {
