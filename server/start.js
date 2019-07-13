@@ -341,113 +341,6 @@ const updateFood = () => {
         })
     }
 }
-
-// SETTINGS
-
-const defaultSetings = {
-    maxPlayers: 69, //any integer above 0
-    areaShape: "random", //random, circle, square
-    wrap: "random", //random, yes, no
-    playerShape: "random", //random, circle, square
-    shrinkType: "random", //random, gradual, instant
-    shrinkSpeed: "random", //random, fast, normal, slow
-    shrinkTimeout: "random", //random, fast, normal, slow, never (not on random)
-    powerupsRate: "random", //random, low, medium, high
-    enabledPowerups: [
-        "superspeed",
-        "speedup",
-        "speeddown",
-        "cornerup",
-        "cornerdown",
-        "sizeup",
-        "sizedown"
-    ],
-    powerupsDespawn: "random", //random, fast, slow, never (not on random)
-    foodCount: "random", //random, 1, players
-    gamemode: "random", //random, lastalive, score
-    port: 7635
-}
-const settings = JSON.parse(JSON.stringify(defaultSetings))
-if (args.maxPlayers && Number(args.maxPlayers) > 1) {
-    settings.maxPlayers = Number(args.maxPlayers)
-}
-if (args.areaShape && ["random", "circle", "square"].includes(String(args.areaShape))) {
-    settings.areaShape = String(args.areaShape)
-}
-if (args.wrap && ["random", "yes", "no"].includes(String(args.wrap))) {
-    settings.wrap = String(args.wrap)
-}
-if (args.playerShape && ["random", "circle", "square"].includes(String(args.playerShape))) {
-    settings.playerShape = String(args.playerShape)
-}
-if (args.shrinkType && ["random", "gradual", "instant", "never"].includes(String(args.shrinkType))) {
-    settings.shrinkType = String(args.shrinkType)
-}
-if (args.shrinkSpeed && ["random", "fast", "normal", "slow"].includes(String(args.shrinkSpeed))) {
-    settings.shrinkSpeed = String(args.shrinkSpeed)
-}
-if (args.shrinkTimeout && ["random", "fast", "normal", "slow"].includes(String(args.shrinkTimeout))) {
-    settings.shrinkTimeout = String(args.shrinkTimeout)
-}
-if (args.powerupsRate && ["random", "low", "medium", "high"].includes(String(args.powerupsRate))) {
-    settings.powerupsRate = String(args.powerupsRate)
-}
-if (args.enabledPowerups && Array.isArray(args.enabledPowerups)) {
-    settings.enabledPowerups = []
-    for (const powerup of args.enabledPowerups) {
-        if (defaultSetings.enabledPowerups.includes(powerup)) {
-            if (!settings.enabledPowerups.includes(powerup)) {
-                settings.enabledPowerups.push(powerup)
-            }
-        }
-    }
-}
-if (args.powerupsDespawn && ["random", "fast", "slow", "never"].includes(String(args.powerupsDespawn))) {
-    settings.powerupsDespawn = String(args.powerupsDespawn)
-}
-if (args.foodCount && ["random", "1", "players"].includes(String(args.foodCount))) {
-    settings.foodCount = String(args.foodCount)
-}
-if (args.gamemode && ["random", "lastalive", "score"].includes(String(args.gamemode))) {
-    settings.gamemode = String(args.gamemode)
-}
-if (args.port && Number(args.port) > 0 && Number(args.port) < 100000) {
-    settings.port = Number(args.port)
-}
-let serveWWWCLientFiles = true
-if (args.serverOnly || args.noWWWServe) {
-    serveWWWCLientFiles = false
-}
-
-// INIT
-
-if (serveWWWCLientFiles) {
-    www()
-}
-const server = new ws.Server({
-    port: settings.port
-})
-const clients = []
-// game will be filled with proper data when starting a new game
-const game = {
-    state: "lobby",
-    countdown: LOBBYCOUNTDOWN,
-    players: [],
-    area: {
-        init: {},
-        current: {},
-        new: {},
-        time: 0,
-        shape: null,
-        type: null
-    },
-    powerups: [],
-    food: [],
-    lastwinner: null,
-    lastalive: null,
-    wrap: null
-}
-
 // LOOPS & MAIN FUNCTIONS
 
 const startGame = autotrigger => {
@@ -797,51 +690,157 @@ const informClients = () => {
     }
 }
 
-// OTHER
+// SETTINGS
 
-server.on("connection", (client, req) => {
-    const clientId = clients.length
-    console.log("new client connected:".green, req.connection.remoteAddress.green)
-    clients.push({
-        players: [],
-        socket: client,
-        ip: req.connection.remoteAddress
-    })
-    client.on("message", msg => {
-        try {
-            // check if the message is json and contains a body type
-            const message = JSON.parse(msg)
-            if (message.type && typeof message.type === "string") {
-                processMessage(clientId, message)
-            }
-        } catch (e) {
-            // no action required
-        }
-    })
-    client.on("close", () => {
-        console.log("client disconnected:".red, req.connection.remoteAddress.red)
-        game.players.forEach(gp => {
-            clients[clientId].players.forEach(cp => {
-                if (gp.uuid === cp.uuid) {
-                    gp.alive = false
-                }
-            })
-        })
-        clients[clientId].players = []
-        clients[clientId].socket = null
-    })
-})
-process.openStdin().addListener("data", d => {
-    processCLI(d.toString().trim())
-})
-let lasttimer = process.hrtime()
-const timer = () => {
-    // calculate delta
-    const [seconds, nanoseconds] = process.hrtime(lasttimer)
-    lasttimer = process.hrtime()
-    const delta = seconds * 1000000000 + nanoseconds
-    // call gameloop
-    gameloop(delta)
+const defaultSetings = {
+    maxPlayers: 69, //any integer above 0
+    areaShape: "random", //random, circle, square
+    wrap: "random", //random, yes, no
+    playerShape: "random", //random, circle, square
+    shrinkType: "random", //random, gradual, instant
+    shrinkSpeed: "random", //random, fast, normal, slow
+    shrinkTimeout: "random", //random, fast, normal, slow, never (not on random)
+    powerupsRate: "random", //random, low, medium, high
+    enabledPowerups: [
+        "superspeed",
+        "speedup",
+        "speeddown",
+        "cornerup",
+        "cornerdown",
+        "sizeup",
+        "sizedown"
+    ],
+    powerupsDespawn: "random", //random, fast, slow, never (not on random)
+    foodCount: "random", //random, 1, players
+    gamemode: "random", //random, lastalive, score
+    port: 7635
 }
-setInterval(informClients, 10)
-setInterval(timer, 10)
+const settings = JSON.parse(JSON.stringify(defaultSetings))
+if (args.maxPlayers && Number(args.maxPlayers) > 1) {
+    settings.maxPlayers = Number(args.maxPlayers)
+}
+if (args.areaShape && ["random", "circle", "square"].includes(String(args.areaShape))) {
+    settings.areaShape = String(args.areaShape)
+}
+if (args.wrap && ["random", "yes", "no"].includes(String(args.wrap))) {
+    settings.wrap = String(args.wrap)
+}
+if (args.playerShape && ["random", "circle", "square"].includes(String(args.playerShape))) {
+    settings.playerShape = String(args.playerShape)
+}
+if (args.shrinkType && ["random", "gradual", "instant", "never"].includes(String(args.shrinkType))) {
+    settings.shrinkType = String(args.shrinkType)
+}
+if (args.shrinkSpeed && ["random", "fast", "normal", "slow"].includes(String(args.shrinkSpeed))) {
+    settings.shrinkSpeed = String(args.shrinkSpeed)
+}
+if (args.shrinkTimeout && ["random", "fast", "normal", "slow"].includes(String(args.shrinkTimeout))) {
+    settings.shrinkTimeout = String(args.shrinkTimeout)
+}
+if (args.powerupsRate && ["random", "low", "medium", "high"].includes(String(args.powerupsRate))) {
+    settings.powerupsRate = String(args.powerupsRate)
+}
+if (args.enabledPowerups && Array.isArray(args.enabledPowerups)) {
+    settings.enabledPowerups = []
+    for (const powerup of args.enabledPowerups) {
+        if (defaultSetings.enabledPowerups.includes(powerup)) {
+            if (!settings.enabledPowerups.includes(powerup)) {
+                settings.enabledPowerups.push(powerup)
+            }
+        }
+    }
+}
+if (args.powerupsDespawn && ["random", "fast", "slow", "never"].includes(String(args.powerupsDespawn))) {
+    settings.powerupsDespawn = String(args.powerupsDespawn)
+}
+if (args.foodCount && ["random", "1", "players"].includes(String(args.foodCount))) {
+    settings.foodCount = String(args.foodCount)
+}
+if (args.gamemode && ["random", "lastalive", "score"].includes(String(args.gamemode))) {
+    settings.gamemode = String(args.gamemode)
+}
+if (args.port && Number(args.port) > 0 && Number(args.port) < 100000) {
+    settings.port = Number(args.port)
+}
+let serveWWWCLientFiles = true
+if (args.serverOnly || args.noWWWServe) {
+    serveWWWCLientFiles = false
+}
+
+// INIT
+
+const clients = []
+// game will be filled with proper data when starting a new game
+const game = {
+    state: "lobby",
+    countdown: LOBBYCOUNTDOWN,
+    players: [],
+    area: {
+        init: {},
+        current: {},
+        new: {},
+        time: 0,
+        shape: null,
+        type: null
+    },
+    powerups: [],
+    food: [],
+    lastwinner: null,
+    lastalive: null,
+    wrap: null
+}
+
+if (!module.parent) {
+    if (serveWWWCLientFiles) {
+        www()
+    }
+    const server = new ws.Server({
+        port: settings.port
+    })
+    server.on("connection", (client, req) => {
+        const clientId = clients.length
+        console.log("new client connected:".green, req.connection.remoteAddress.green)
+        clients.push({
+            players: [],
+            socket: client,
+            ip: req.connection.remoteAddress
+        })
+        client.on("message", msg => {
+            try {
+                // check if the message is json and contains a body type
+                const message = JSON.parse(msg)
+                if (message.type && typeof message.type === "string") {
+                    processMessage(clientId, message)
+                }
+            } catch (e) {
+                // no action required
+            }
+        })
+        client.on("close", () => {
+            console.log("client disconnected:".red, req.connection.remoteAddress.red)
+            game.players.forEach(gp => {
+                clients[clientId].players.forEach(cp => {
+                    if (gp.uuid === cp.uuid) {
+                        gp.alive = false
+                    }
+                })
+            })
+            clients[clientId].players = []
+            clients[clientId].socket = null
+        })
+    })
+    process.openStdin().addListener("data", d => {
+        processCLI(d.toString().trim())
+    })
+    let lasttimer = process.hrtime()
+    const timer = () => {
+        // calculate delta
+        const [seconds, nanoseconds] = process.hrtime(lasttimer)
+        lasttimer = process.hrtime()
+        const delta = seconds * 1000000000 + nanoseconds
+        // call gameloop
+        gameloop(delta)
+    }
+    setInterval(informClients, 10)
+    setInterval(timer, 10)
+}
