@@ -20,6 +20,9 @@
 
 const args = require("minimist")(process.argv.slice(2))
 const ws = require("ws")
+require("colors")
+
+const www = require("./www")
 
 // UTIL
 
@@ -411,9 +414,16 @@ if (args.gamemode && ["random", "lastalive", "score"].includes(String(args.gamem
 if (args.port && Number(args.port) > 0 && Number(args.port) < 100000) {
     settings.port = Number(args.port)
 }
+let serveWWWCLientFiles = true
+if (args.serverOnly || args.noWWWServe) {
+    serveWWWCLientFiles = false
+}
 
 // INIT
 
+if (serveWWWCLientFiles) {
+    www()
+}
 const server = new ws.Server({
     port: settings.port
 })
@@ -463,12 +473,15 @@ const startGame = autotrigger => {
         if (autotrigger) {
             game.countdown = LOBBYCOUNTDOWN
         } else {
-            console.log("not enough players to start")
+            console.log("not enough players to start".red)
         }
         return
     }
     game.countdown = READYCOUNTDOWN
-    console.log("starting a new game with these players:", game.players)
+    console.log("starting a new game with these players:".green)
+    for (const player of game.players) {
+        console.log(` - ${player.uuid} ${player.name} ${player.color}`.blue)
+    }
     game.settings = JSON.parse(JSON.stringify(settings))
     if (game.settings.areaShape === "random") {
         game.settings.areaShape = coinflip() ? "circle" : "square"
@@ -559,7 +572,7 @@ const startGame = autotrigger => {
 }
 
 const stopGame = () => {
-    console.log("game has ended")
+    console.log("game has ended".green)
     game.countdown = LOBBYCOUNTDOWN
     game.state = "lobby"
 }
@@ -569,41 +582,44 @@ const processCLI = message => {
         if (game.state === "lobby") {
             startGame()
         } else {
-            console.log("a game is already running")
+            console.log("a game is already running".yellow)
         }
     } else if (message === "stop") {
         if (game.state === "ready") {
-            console.log("the game is still starting")
+            console.log("the game is still starting".yellow)
         } else if (game.state === "game") {
             stopGame()
         } else {
-            console.log("no game is running yet")
+            console.log("no game is running yet".yellow)
         }
     } else {
-        console.log("unknown command")
+        console.log("unknown command".red)
     }
 }
 const processMessage = (clientId, message) => {
+    message.uuid = message.uuid && message.uuid.slice(0, 100)
+    message.name = message.name && message.name.slice(0, 100)
+    message.color= message.color && message.color.slice(0, 100)
+    message.moves = message.moves && message.moves.slice(0, 100)
     if (message.type === "newplayer" && game.state === "lobby") {
         for (const c of clients) {
             for (const p of c.players) {
-                if (p.uuid === message.uuid.slice(0, 100)) {
+                if (p.uuid === message.uuid) {
                     return
                 }
             }
         }
-        console.log(`client ${clients[clientId].ip} added new player:`,
-            message.uuid.slice(0, 100), message.name.slice(0, 100),
-            message.color.slice(0, 100))
+        console.log(`client ${clients[clientId].ip} added new player:`.green)
+        console.log(` - ${message.uuid} ${message.name} ${message.color}`.blue)
         clients[clientId].players.push({
-            uuid: message.uuid.slice(0, 100),
-            name: message.name.slice(0, 100),
-            color: message.color.slice(0, 100),
+            uuid: message.uuid,
+            name: message.name,
+            color: message.color,
             wins: 0
         })
     }
     if (message.type === "movement" && game.state === "game") {
-        message.moves.slice(0, 100).forEach(move => {
+        message.moves.forEach(move => {
             const playersWithCorrectUUID = game.players.filter(p => {
                 return p.uuid === move.uuid.slice(0, 100)
             })
@@ -624,15 +640,16 @@ const announceWinner = player => {
             if (winners.length === 1) {
                 winners[0].wins += 1
                 game.lastwinner = winners[0]
-                console.log("the winner is:", winners[0])
+                console.log("the winner is:".green)
+                console.log(` - ${winners[0].uuid} ${winners[0].name} ${winners[0].color}`.blue)
                 break
             } else {
-                console.log("it's a draw")
+                console.log("it's a draw".green)
                 game.lastwinner = null
             }
         }
     } else {
-        console.log("it's a draw")
+        console.log("it's a draw".green)
         game.lastwinner = null
     }
 }
@@ -658,7 +675,7 @@ const gameloop = delta => {
                 } else if (highestScoringPlayers.length === 1) {
                     announceWinner(highestScoringPlayers[0])
                 } else {
-                    console.log("it's a draw")
+                    console.log("it's a draw".green)
                     game.lastwinner = null
                 }
                 stopGame()
@@ -784,7 +801,7 @@ const informClients = () => {
 
 server.on("connection", (client, req) => {
     const clientId = clients.length
-    console.log("new client connected:", req.connection.remoteAddress)
+    console.log("new client connected:".green, req.connection.remoteAddress.green)
     clients.push({
         players: [],
         socket: client,
@@ -802,7 +819,7 @@ server.on("connection", (client, req) => {
         }
     })
     client.on("close", () => {
-        console.log("client disconnected:", req.connection.remoteAddress)
+        console.log("client disconnected:".red, req.connection.remoteAddress.red)
         game.players.forEach(gp => {
             clients[clientId].players.forEach(cp => {
                 if (gp.uuid === cp.uuid) {
