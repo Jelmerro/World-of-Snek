@@ -23,8 +23,8 @@ require("colors")
 
 const serve = () => {
     http.createServer((req, res) => {
-        const requestUrl = `../client/${req.url}`
-        const requestUrlIndex = `../client/${req.url}/index.html`
+        const requestUrl = `${__dirname}/../client/${req.url}`
+        const requestUrlIndex = `${requestUrl}/index.html`
         console.log(`${res.socket.remoteAddress} - ${req.url}`.grey)
         try {
             if (isFile(requestUrl)) {
