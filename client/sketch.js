@@ -311,7 +311,8 @@ function drawPlayers() {
             fill("#777777")
         }
         player.position.forEach((position, i) => {
-            if (i % drawFactor !== 0) {
+            // always draw the head which is index 0
+            if (i % drawFactor !== 0 && i !== 0) {
                 return
             }
             if (player.shape === "square") {
