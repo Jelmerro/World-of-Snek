@@ -21,9 +21,9 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight updatePlayerList showPlayerList hidePlayerlist preferredIP
-preferredPort connectModal M updateServerSettings updatePlayerSettings
-dynamicScaling maxEntities */
+strokeWeight updatePlayerList updateAreaShrink showElement hideElement
+playerlist areaShrink preferredIP preferredPort connectModal M
+updateServerSettings updatePlayerSettings dynamicScaling maxEntities */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"
@@ -78,11 +78,13 @@ function draw() {
     // center circle
     circle(0, 0, 5)
     if (gameData.state === "connecting") {
-        hidePlayerlist()
+        hideElement(playerlist)
+        hideElement(areaShrink)
         text("Ze blutüth device is ready to pair", 0, 0)
     }
     if (gameData.state === "lobby") {
-        hidePlayerlist()
+        hideElement(playerlist)
+        hideElement(areaShrink)
         const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
         // dividing to get seconds from nanoseconds
         translate(0, 64-windowHeight/2)
@@ -104,16 +106,16 @@ function draw() {
         })
     }
     if (gameData.state === "ready") {
-        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
-        // dividing to get seconds from nanoseconds
         scaleGame()
         drawAreas()
         drawFood()
         drawPlayers()
         // show players in list
-        showPlayerList()
+        showElement(playerlist)
         updatePlayerList(gameData.players)
         scale(1, -1) // flip y back to render text
+        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
+        // dividing to get seconds from nanoseconds
         const scaledSize = gameData.area.init.r/10
         textSize(scaledSize)
         fill(255)
@@ -133,9 +135,19 @@ function draw() {
         scaleGame()
         drawAreas()
         drawFood()
-        showPlayerList()
+        showElement(playerlist)
         updatePlayerList(gameData.players)
         drawPlayers()
+        // overlay area countdown
+        const timeToNewArea = gameData.area.time
+        if (gameData.area.new.x) {
+            const countdown = Math.abs(Math.ceil(timeToNewArea / 1000000000))
+            // dividing to get seconds from nanoseconds
+            showElement(areaShrink)
+            updateAreaShrink(countdown)
+        } else {
+            hideElement(areaShrink)
+        }
         // send player moves to server
         const moves = []
         localPlayers.forEach(player => {
@@ -291,9 +303,7 @@ function drawPlayers() {
     gameData.players.forEach(player => {
         totalEntities += player.position.length
     })
-    console.log(`less total than max? ${totalEntities < maxEntities}`)
     const drawFactor = Math.ceil(totalEntities/maxEntities)
-    console.log(`factor: ${drawFactor}`)
     gameData.players.forEach(player => {
         // make rainbow option and other magic words
         fill(player.color)
