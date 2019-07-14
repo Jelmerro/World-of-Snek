@@ -22,6 +22,7 @@
 /* global M connectSocket gameData serverIP serverPort localPlayers */
 
 const playerlist = document.getElementById("player-list")
+const areaShrink = document.getElementById("area-shrink")
 const menu = document.getElementById("menu")
 let menuModal
 const connect = document.getElementById("connect-modal")
@@ -36,10 +37,11 @@ const serverSettings = document.getElementById("server-settings")
 const playerSettings = document.getElementById("player-settings")
 let dynamicScaling = false
 const scalingControl = document.getElementById("dynamic-scaling")
-let maxEntities = 500
+let maxEntities = 2000
 const maxEntitiesControl = document.getElementById("max-entities")
 
 let lastPlayers
+let lastCountdown
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
@@ -65,9 +67,9 @@ window.addEventListener("keydown", e => {
 })
 
 ipField.addEventListener("keydown", e => {
-    const key = e.keyCode
+    const key = e.key
     // if a colon is typed, go to port field
-    if (key !== 186) {
+    if (key !== ":") {
         return
     }
     e.preventDefault()
@@ -150,6 +152,13 @@ function updatePlayerList(players) {
     lastPlayers = newPlayers
 }
 
+function updateAreaShrink(countdown) {
+    if (lastCountdown !== countdown) {
+        areaShrink.textContent = countdown
+    }
+    lastCountdown = countdown
+}
+
 function filterPlayerData(players) {
     return players.map(player => {
         // filter to only info that is relevant to updating playerlist
@@ -161,15 +170,15 @@ function filterPlayerData(players) {
     })
 }
 
-function showPlayerList() {
-    if (playerlist.style.display !== "flex") {
-        playerlist.style.display = "flex"
+function showElement(element) {
+    if (element.style.display !== "flex") {
+        element.style.display = "flex"
     }
 }
 
-function hidePlayerlist() {
-    if (playerlist.style.display !== "none") {
-        playerlist.style.display = "none"
+function hideElement(element) {
+    if (element.style.display !== "none") {
+        element.style.display = "none"
     }
 }
 
