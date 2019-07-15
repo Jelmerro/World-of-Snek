@@ -56,3 +56,9 @@ body {
 .cirlce {
     border-radius: 50%;
 }
+
+input[type=color] {
+    height: 2em;
+    width: 100%;
+    margin: .5em 0;
+}

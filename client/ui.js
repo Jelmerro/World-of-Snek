@@ -27,8 +27,12 @@ const menu = document.getElementById("menu")
 let menuModal
 const connect = document.getElementById("connect-modal")
 let connectModal
+const addPlayer = document.getElementById("add-player")
+let addPlayerModal
 const connectButton = document.getElementById("connect")
 const closeConnect = document.getElementById("close-connect")
+const addPlayerButton = document.getElementById("confirm-player")
+const closePlayer = document.getElementById("close-player")
 const ipField = document.getElementById("server-ip")
 const portField = document.getElementById("server-port")
 let preferredIP
@@ -39,16 +43,22 @@ let dynamicScaling = false
 const scalingControl = document.getElementById("dynamic-scaling")
 let maxEntities = 2000
 const maxEntitiesControl = document.getElementById("max-entities")
+const controlSelect = document.getElementById("control-select")
+const playerColorField = document.getElementById("player-color")
+const playerNameField = document.getElementById("player-name")
 
 let lastPlayers
 let lastCountdown
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
-    const elems = document.querySelectorAll(".modal")
-    const instances = M.Modal.init(elems, {dismissible: false})
+    const modals = document.querySelectorAll(".modal")
+    const modalInstances = M.Modal.init(modals, {dismissible: false})
     menuModal = M.Modal.getInstance(menu)
     connectModal = M.Modal.getInstance(connect)
+    addPlayerModal = M.Modal.getInstance(addPlayer)
+    const selects = document.querySelectorAll("select")
+    const selectInstances = M.FormSelect.init(selects)
 })
 
 window.addEventListener("keydown", e => {
@@ -100,9 +110,27 @@ connect.addEventListener("keydown", e => {
     }
 })
 
+addPlayer.addEventListener("keydown", e => {
+    const key = e.keyCode
+    // if enter is pressed within modal, submit field inputs
+    if (key === 13) {
+        // connectFromModal()
+    }
+    // if esc is pressed, close the modal
+    if (key === 27) {
+        addPlayerModal.close()
+        // prevent the menuModal trigger
+        e.stopPropagation()
+    }
+})
+
 connectButton.addEventListener("click", connectFromModal)
 
 closeConnect.addEventListener("click", closeConnectModal)
+
+closePlayer.addEventListener("click", () => {
+    addPlayerModal.close()
+})
 
 scalingControl.addEventListener("change", () => {
     dynamicScaling = scalingControl.checked
@@ -110,6 +138,10 @@ scalingControl.addEventListener("change", () => {
 
 maxEntitiesControl.addEventListener("change", () => {
     maxEntities = maxEntitiesControl.value
+})
+
+controlSelect.addEventListener("change", () => {
+    console.log(controlSelect.value)
 })
 
 function connectFromModal() {
@@ -207,15 +239,55 @@ function updatePlayerSettings() {
         element.classList.add("player")
         element.innerHTML =  `
         <div class="blob" style="background-color:${player.color};"></div>
-        <div>${player.name}</div>
-        <div>Controls: ????</div>`
+        <div>${player.name}</div>`
+        const button = document.createElement("button")
+        button.textContent = "Edit"
+        button.classList.add("btn", "waves-effect", "waves-light")
+        button.addEventListener("click", () => {
+            updateAddPlayer(true, player)
+            addPlayerModal.open()
+        })
         playerSettings.appendChild(element)
+        playerSettings.appendChild(button)
+        playerSettings.appendChild(document.createElement("hr"))
     })
     const addButton = document.createElement("button")
     addButton.textContent = "Add player"
     addButton.classList.add("btn", "waves-effect", "waves-light")
+    addButton.addEventListener("click", () => {
+        updateAddPlayer()
+        addPlayerModal.open()
+    })
     if (gameData.state === "connecting") {
         addButton.setAttribute("disabled", "disabled")
     }
     playerSettings.appendChild(addButton)
+}
+
+function updateAddPlayer(edit = false, player) {
+    const title = addPlayer.querySelector("h3")
+    if (edit) {
+        title.textContent = "Edit a player"
+        playerColorField.value = player.color
+        playerNameField.value = player.name
+        if (player.controls.preset) {
+            controlSelect.value = player.controls.preset
+        } else {
+            controlSelect.value = "Custom"
+        }
+        // onclick to override function
+        addPlayerButton.onclick = () => {
+            console.log("you just edited a player")
+        }
+    } else {
+        title.textContent = "Add a new player"
+        playerColorField.value = null
+        playerNameField.value = null
+        controlSelect.value = "Choose a set of controls"
+        // onclick to override function
+        addPlayerButton.onclick = () => {
+            console.log("you just added a player")
+        }
+    }
+    M.updateTextFields()
 }

@@ -36,14 +36,16 @@ let lastCenter = [0, 0]
 let totalEntities
 const localPlayers = []
 
-const exampleControls = {
+const arrowControls = {
+    preset: "Arrows",
     up: 38,
     down: 40,
     left: 37,
     right: 39
 }
 
-const exampleControls2 = {
+const wasdControls = {
+    preset: "WASD",
     up: 87,
     down: 83,
     left: 65,
@@ -59,8 +61,8 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    localPlayers.push(makeNewPlayer("May", "orange", exampleControls))
-    localPlayers.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
+    localPlayers.push(makeNewPlayer("May", "#FFA500", arrowControls))
+    localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", wasdControls))
 }
 
 function windowResized() {
@@ -209,6 +211,7 @@ function makeNewPlayer(name, color, controls) {
         color,
         uuid: genUuid(),
         controls: {
+            preset: controls.preset,
             up: controls.up,
             down: controls.down,
             left: controls.left,
