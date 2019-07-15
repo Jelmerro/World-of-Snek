@@ -22,6 +22,21 @@ body {
     color: #FFF;
 }
 
+#player-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#player-settings .player {
+    flex-grow: 1;
+    max-width: 100%;
+}
+
+#player-settings hr {
+    width: 100%;
+}
+
 .player {
     display: flex;
     flex-direction: row;

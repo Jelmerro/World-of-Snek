@@ -22,7 +22,7 @@
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
 strokeWeight updatePlayerList updateAreaShrink showElement hideElement
-playerlist areaShrink preferredIP preferredPort connectModal M
+playerlist areaShrink preferredIP preferredPort connectModal M controls
 updateServerSettings updatePlayerSettings dynamicScaling maxEntities */
 
 let socket, serverIP, serverPort
@@ -36,22 +36,6 @@ let lastCenter = [0, 0]
 let totalEntities
 const localPlayers = []
 
-const arrowControls = {
-    preset: "Arrows",
-    up: 38,
-    down: 40,
-    left: 37,
-    right: 39
-}
-
-const wasdControls = {
-    preset: "WASD",
-    up: 87,
-    down: 83,
-    left: 65,
-    right: 68
-}
-
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
     // try to connect websocket
@@ -61,8 +45,8 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    localPlayers.push(makeNewPlayer("May", "#FFA500", arrowControls))
-    localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", wasdControls))
+    // localPlayers.push(makeNewPlayer("May", "#FFA500", controls.Arrows))
+    // localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", controls.WASD))
 }
 
 function windowResized() {
