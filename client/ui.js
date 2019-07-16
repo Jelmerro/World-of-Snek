@@ -44,6 +44,7 @@ let dynamicScaling = false
 const scalingControl = document.getElementById("dynamic-scaling")
 let maxEntities = 2000
 const maxEntitiesControl = document.getElementById("max-entities")
+const playerForm = document.getElementById("player-form")
 const controlSelect = document.getElementById("control-select")
 const playerColorField = document.getElementById("player-color")
 const playerNameField = document.getElementById("player-name")
@@ -51,13 +52,12 @@ const controlUp = document.getElementById("up")
 const controlDown = document.getElementById("down")
 const controlLeft = document.getElementById("left")
 const controlRight = document.getElementById("right")
+// for materialize
+const modals = document.querySelectorAll(".modal")
+const selects = document.querySelectorAll("select")
 
 let lastPlayers
 let lastCountdown
-
-//for materialize
-const modals = document.querySelectorAll(".modal")
-const selects = document.querySelectorAll("select")
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
@@ -119,10 +119,6 @@ connect.addEventListener("keydown", e => {
 
 addPlayer.addEventListener("keydown", e => {
     const key = e.keyCode
-    // if enter is pressed within modal, submit field inputs
-    if (key === 13) {
-        // connectFromModal()
-    }
     // if esc is pressed, close the modal
     if (key === 27) {
         addPlayerModal.close()
@@ -135,7 +131,8 @@ connectButton.addEventListener("click", connectFromModal)
 
 closeConnect.addEventListener("click", closeConnectModal)
 
-closePlayer.addEventListener("click", () => {
+closePlayer.addEventListener("click", e => {
+    e.preventDefault()
     addPlayerModal.close()
 })
 
@@ -150,11 +147,29 @@ maxEntitiesControl.addEventListener("change", () => {
 controlSelect.addEventListener("change", () => {
     if (controls[controlSelect.value]) {
         fillControlFields(controls[controlSelect.value])
+        controlUp.disabled = true
+        controlDown.disabled = true
+        controlLeft.disabled = true
+        controlRight.disabled = true
     } else {
         emptyControlFields()
+        controlUp.disabled = false
+        controlDown.disabled = false
+        controlLeft.disabled = false
+        controlRight.disabled = false
     }
     M.updateTextFields()
 })
+
+controlUp.addEventListener("keydown", setKeyControl)
+controlDown.addEventListener("keydown", setKeyControl)
+controlLeft.addEventListener("keydown", setKeyControl)
+controlRight.addEventListener("keydown", setKeyControl)
+
+function setKeyControl(e) {
+    e.preventDefault()
+    e.target.value = e.code
+}
 
 function connectFromModal() {
     preferredIP = ipField.value
@@ -271,9 +286,6 @@ function updatePlayerSettings() {
         updateAddPlayer()
         addPlayerModal.open()
     })
-    if (gameData.state === "connecting") {
-        addButton.setAttribute("disabled", "disabled")
-    }
     playerSettings.appendChild(addButton)
 }
 
@@ -292,36 +304,46 @@ function updateAddPlayer(edit = false, player) {
         }
         fillControlFields(player.controls)
         // onclick to override function
-        addPlayerButton.onclick = () => {
-            const editedPlayer = localPlayers.find(p => p.uuid === player.uuid)
-            if (controls[controlSelect.value]) {
-                Object.assign(editedPlayer.controls, controls[controlSelect.value])
-            } else {
-                Object.assign(editedPlayer.controls, getControls())
+        addPlayerButton.onclick = e => {
+            e.preventDefault()
+            const formValid = playerForm.checkValidity()
+            const selectValid = controlSelect.selectedIndex !== 0
+            if (formValid && selectValid) {
+                const editedPlayer = localPlayers.find(p => p.uuid === player.uuid)
+                if (controls[controlSelect.value]) {
+                    Object.assign(editedPlayer.controls, controls[controlSelect.value])
+                } else {
+                    Object.assign(editedPlayer.controls, getControls())
+                }
+                addPlayerModal.close()
             }
-            addPlayerModal.close()
         }
     } else {
         title.textContent = "Add a new player"
-        playerColorField.value = null
+        playerColorField.value = "#FFFFFF"
         playerColorField.disabled = false
         playerNameField.value = null
         playerNameField.disabled = false
-        controlSelect.value = "Choose a set of controls"
+        controlSelect.selectedIndex = 0
         emptyControlFields()
         // onclick to override function
-        addPlayerButton.onclick = () => {
-            const [name, color] = getNameAndColor()
-            let ctrls
-            if (controls[controlSelect.value]) {
-                ctrls = controls[controlSelect.value]
-            } else {
-                ctrls = getControls()
+        addPlayerButton.onclick = e => {
+            e.preventDefault()
+            const formValid = playerForm.checkValidity()
+            const selectValid = controlSelect.selectedIndex !== 0
+            if (formValid && selectValid) {
+                const [name, color] = getNameAndColor()
+                let ctrls
+                if (controls[controlSelect.value]) {
+                    ctrls = controls[controlSelect.value]
+                } else {
+                    ctrls = getControls()
+                }
+                const newPlayer = makeNewPlayer(name, color, ctrls)
+                localPlayers.push(newPlayer)
+                updatePlayerSettings()
+                addPlayerModal.close()
             }
-            const newPlayer = makeNewPlayer(name, color, ctrls)
-            localPlayers.push(newPlayer)
-            addPlayerModal.close()
-            updatePlayerSettings()
         }
     }
     M.updateTextFields()

@@ -21,14 +21,14 @@
 /* global localPlayers */
 
 const controls = {
-    Arrows: {
+    "Arrows": {
         preset: "Arrows",
         up: "ArrowUp",
         down: "ArrowDown",
         left: "ArrowLeft",
         right: "ArrowRight"
     },
-    WASD: {
+    "WASD": {
         preset: "WASD",
         up: "KeyW",
         down: "KeyS",
