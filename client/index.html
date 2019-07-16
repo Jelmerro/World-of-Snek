@@ -31,7 +31,7 @@
     </div>
     <!-- area shrink countdown -->
     <div id="area-shrink">
-        9
+
     </div>
     <!-- Modals -->
     <div id="menu" class="modal">
@@ -83,49 +83,51 @@
         </div>
     </div>
     <div id="add-player" class="modal">
-        <div class="modal-content">
-            <h3>Add a new player</h3>
-            <div class="row">
-                <div class="col s2">
-                    <label>Color</label>
-                    <br>
-                    <input id="player-color" type="color">
+        <form id="player-form">
+            <div class="modal-content">
+                <h3>Add a new player</h3>
+                <div class="row">
+                    <div class="col s2">
+                        <label>Color</label>
+                        <br>
+                        <input id="player-color" type="color" required>
+                    </div>
+                    <div class="input-field col s4">
+                        <input id="player-name" type="text" required>
+                        <label for="player-name">Name</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select id="control-select" required>
+                            <option disabled selected>Choose a set of controls</option>
+                            <option value="WASD">WASD</option>
+                            <option value="Arrows">Arrows</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                        <label>Controls</label>
+                    </div>
                 </div>
-                <div class="input-field col s4">
-                    <input id="player-name" type="text">
-                    <label for="player-name">Name</label>
+                <div class="row">
+                    <div class="input-field col s3">
+                        <input id="up" type="text" disabled required>
+                        <label>Up</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="down" type="text" disabled required>
+                        <label>Down</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="left" type="text" disabled required>
+                        <label>Left</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="right" type="text" disabled required>
+                        <label>Right</label>
+                    </div>
                 </div>
-                <div class="input-field col s6">
-                    <select id="control-select">
-                        <option disabled selected>Choose a set of controls</option>
-                        <option value="WASD">WASD</option>
-                        <option value="Arrows">Arrows</option>
-                        <option value="Custom">Custom</option>
-                    </select>
-                    <label>Controls</label>
-                </div>
+                <button id="confirm-player" class="btn waves-effect waves-light">Confirm</button>
+                <button id="close-player" class="btn waves-effect waves-light">Cancel</button>
             </div>
-            <div class="row">
-                <div class="input-field col s3">
-                    <input id="up" type="text" disabled>
-                    <label>Up</label>
-                </div>
-                <div class="input-field col s3">
-                    <input id="down" type="text" disabled>
-                    <label>Down</label>
-                </div>
-                <div class="input-field col s3">
-                    <input id="left" type="text" disabled>
-                    <label>Left</label>
-                </div>
-                <div class="input-field col s3">
-                    <input id="right" type="text" disabled>
-                    <label>Right</label>
-                </div>
-            </div>
-            <button id="confirm-player" class="btn waves-effect waves-light">Confirm</button>
-            <button id="close-player" class="btn waves-effect waves-light">Cancel</button>
-        </div>
+        </form>
     </div>
     <script src="p5.min.js"></script>
     <script src="p5.sound.min.js"></script>
