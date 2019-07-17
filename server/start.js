@@ -18,6 +18,7 @@
 */
 "use strict"
 
+const os = require("os")
 const args = require("minimist")(process.argv.slice(2))
 const ws = require("ws")
 require("colors")
@@ -791,9 +792,6 @@ const game = {
 }
 
 if (!module.parent) {
-    if (serveWWWCLientFiles) {
-        www()
-    }
     const server = new ws.Server({
         port: settings.port
     })
@@ -843,4 +841,17 @@ if (!module.parent) {
     }
     setInterval(informClients, 10)
     setInterval(timer, 10)
+    if (serveWWWCLientFiles) {
+        www()
+        console.log("Client started!".green)
+        const interfaces = os.networkInterfaces()
+        Object.keys(interfaces).forEach(i => {
+            interfaces[i].forEach(l => {
+                console.log(` - http://${l.address}:${8000}`.blue)
+            })
+        })
+        console.log("\n")
+    }
+    console.log("Current settings:".yellow, JSON.stringify(settings, null, 2).yellow)
+    console.log("\n\nServer started!".green)
 }
