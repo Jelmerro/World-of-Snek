@@ -24,6 +24,7 @@ makeNewPlayer */
 
 const playerlist = document.getElementById("player-list")
 const areaShrink = document.getElementById("area-shrink")
+const spectatorDisplay = document.getElementById("spectator-display")
 const menu = document.getElementById("menu")
 let menuModal
 const connect = document.getElementById("connect-modal")
@@ -262,6 +263,13 @@ function updateServerSettings() {
 
 function updatePlayerSettings() {
     emptyElement(playerSettings)
+    // if there are no players yet, inform of spectator mode
+    if (!localPlayers.length) {
+        const element = document.createElement("div")
+        element.textContent = "You are spectating, add a player to start."
+        playerSettings.appendChild(element)
+        playerSettings.appendChild(document.createElement("hr"))
+    }
     localPlayers.forEach(player => {
         const element = document.createElement("div")
         element.classList.add("player")

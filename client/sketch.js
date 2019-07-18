@@ -23,7 +23,8 @@
 circle text textSize textAlign fill square rectMode noFill noStroke scale
 strokeWeight updatePlayerList updateAreaShrink showElement hideElement
 playerlist areaShrink preferredIP preferredPort connectModal M controls
-updateServerSettings updatePlayerSettings dynamicScaling maxEntities */
+updateServerSettings updatePlayerSettings dynamicScaling maxEntities
+spectatorDisplay */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"
@@ -190,6 +191,7 @@ function connectSocket() {
 
 // Make players with name, color, and preferred controls for up/down/left/right
 function makeNewPlayer(name, color, controls) {
+    hideElement(spectatorDisplay)
     return {
         name,
         color,
