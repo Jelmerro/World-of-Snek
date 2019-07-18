@@ -656,35 +656,57 @@ const gameloop = delta => {
 }
 const informClients = () => {
     if (game.state === "game" || game.state === "ready") {
-        const filteredGame = Object.assign({}, game)
+        // Simplify the game object before sending it to all clients
+        const filteredGame = JSON.parse(JSON.stringify(game))
         filteredGame.settings = undefined
+        filteredGame.lastalive = undefined
+        for (const area of ["init", "current", "new"]) {
+            if (filteredGame.area[area].x) {
+                filteredGame.area[area].x = Math.round(filteredGame.area[area].x)
+                filteredGame.area[area].y = Math.round(filteredGame.area[area].y)
+                filteredGame.area[area].r = Math.round(filteredGame.area[area].r)
+            }
+        }
+        filteredGame.food = filteredGame.food.map(f => {
+            return {
+                x: Math.round(f.x),
+                y: Math.round(f.y),
+                r: Math.round(f.r)
+            }
+        })
+        filteredGame.players.forEach(player => {
+            player.position = player.position.map(pos => pos.map(Math.round))
+        })
         if (game.state === "game") {
             filteredGame.countdown = undefined
         }
+        const message = JSON.stringify(filteredGame)
         clients.forEach(c => {
             setTimeout(() => {
                 if (c.socket) {
-                    c.socket.send(JSON.stringify(filteredGame))
+                    c.socket.send(message)
                 }
             }, 0)
         })
     }
     if (game.state === "lobby") {
+        // Send the player list and other basic info while in the lobby
         const players = []
         clients.forEach(c => {
             c.players.forEach(p => {
                 players.push(p)
             })
         })
+        const message = JSON.stringify({
+            state: "lobby",
+            countdown: game.countdown,
+            players: players,
+            lastwinner: game.lastwinner
+        })
         clients.forEach(c => {
             setTimeout(() => {
                 if (c.socket) {
-                    c.socket.send(JSON.stringify({
-                        state: "lobby",
-                        countdown: game.countdown,
-                        players: players,
-                        lastwinner: game.lastwinner
-                    }))
+                    c.socket.send(message)
                 }
             }, 0)
         })
