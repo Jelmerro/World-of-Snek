@@ -19,15 +19,22 @@
 "use strict"
 
 // hmm lekker uitje
-/* global M connectSocket gameData serverIP serverPort localPlayers */
+/* global M connectSocket gameData serverIP serverPort localPlayers controls
+makeNewPlayer */
 
 const playerlist = document.getElementById("player-list")
+const areaShrink = document.getElementById("area-shrink")
+const spectatorDisplay = document.getElementById("spectator-display")
 const menu = document.getElementById("menu")
 let menuModal
 const connect = document.getElementById("connect-modal")
 let connectModal
+const addPlayer = document.getElementById("add-player")
+let addPlayerModal
 const connectButton = document.getElementById("connect")
 const closeConnect = document.getElementById("close-connect")
+const addPlayerButton = document.getElementById("confirm-player")
+const closePlayer = document.getElementById("close-player")
 const ipField = document.getElementById("server-ip")
 const portField = document.getElementById("server-port")
 let preferredIP
@@ -36,17 +43,30 @@ const serverSettings = document.getElementById("server-settings")
 const playerSettings = document.getElementById("player-settings")
 let dynamicScaling = false
 const scalingControl = document.getElementById("dynamic-scaling")
-let maxEntities = 500
+let maxEntities = 2000
 const maxEntitiesControl = document.getElementById("max-entities")
+const playerForm = document.getElementById("player-form")
+const controlSelect = document.getElementById("control-select")
+const playerColorField = document.getElementById("player-color")
+const playerNameField = document.getElementById("player-name")
+const controlUp = document.getElementById("up")
+const controlDown = document.getElementById("down")
+const controlLeft = document.getElementById("left")
+const controlRight = document.getElementById("right")
+// for materialize
+const modals = document.querySelectorAll(".modal")
+const selects = document.querySelectorAll("select")
 
 let lastPlayers
+let lastCountdown
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
-    const elems = document.querySelectorAll(".modal")
-    const instances = M.Modal.init(elems, {dismissible: false})
+    const modalInstances = M.Modal.init(modals, {dismissible: false})
     menuModal = M.Modal.getInstance(menu)
     connectModal = M.Modal.getInstance(connect)
+    addPlayerModal = M.Modal.getInstance(addPlayer)
+    const selectInstances = M.FormSelect.init(selects)
 })
 
 window.addEventListener("keydown", e => {
@@ -65,9 +85,9 @@ window.addEventListener("keydown", e => {
 })
 
 ipField.addEventListener("keydown", e => {
-    const key = e.keyCode
+    const key = e.key
     // if a colon is typed, go to port field
-    if (key !== 186) {
+    if (key !== ":") {
         return
     }
     e.preventDefault()
@@ -98,9 +118,24 @@ connect.addEventListener("keydown", e => {
     }
 })
 
+addPlayer.addEventListener("keydown", e => {
+    const key = e.keyCode
+    // if esc is pressed, close the modal
+    if (key === 27) {
+        addPlayerModal.close()
+        // prevent the menuModal trigger
+        e.stopPropagation()
+    }
+})
+
 connectButton.addEventListener("click", connectFromModal)
 
 closeConnect.addEventListener("click", closeConnectModal)
+
+closePlayer.addEventListener("click", e => {
+    e.preventDefault()
+    addPlayerModal.close()
+})
 
 scalingControl.addEventListener("change", () => {
     dynamicScaling = scalingControl.checked
@@ -109,6 +144,33 @@ scalingControl.addEventListener("change", () => {
 maxEntitiesControl.addEventListener("change", () => {
     maxEntities = maxEntitiesControl.value
 })
+
+controlSelect.addEventListener("change", () => {
+    if (controls[controlSelect.value]) {
+        fillControlFields(controls[controlSelect.value])
+        controlUp.disabled = true
+        controlDown.disabled = true
+        controlLeft.disabled = true
+        controlRight.disabled = true
+    } else {
+        emptyControlFields()
+        controlUp.disabled = false
+        controlDown.disabled = false
+        controlLeft.disabled = false
+        controlRight.disabled = false
+    }
+    M.updateTextFields()
+})
+
+controlUp.addEventListener("keydown", setKeyControl)
+controlDown.addEventListener("keydown", setKeyControl)
+controlLeft.addEventListener("keydown", setKeyControl)
+controlRight.addEventListener("keydown", setKeyControl)
+
+function setKeyControl(e) {
+    e.preventDefault()
+    e.target.value = e.code
+}
 
 function connectFromModal() {
     preferredIP = ipField.value
@@ -150,6 +212,13 @@ function updatePlayerList(players) {
     lastPlayers = newPlayers
 }
 
+function updateAreaShrink(countdown) {
+    if (lastCountdown !== countdown) {
+        areaShrink.textContent = countdown
+    }
+    lastCountdown = countdown
+}
+
 function filterPlayerData(players) {
     return players.map(player => {
         // filter to only info that is relevant to updating playerlist
@@ -161,15 +230,15 @@ function filterPlayerData(players) {
     })
 }
 
-function showPlayerList() {
-    if (playerlist.style.display !== "flex") {
-        playerlist.style.display = "flex"
+function showElement(element) {
+    if (element.style.display !== "flex") {
+        element.style.display = "flex"
     }
 }
 
-function hidePlayerlist() {
-    if (playerlist.style.display !== "none") {
-        playerlist.style.display = "none"
+function hideElement(element) {
+    if (element.style.display !== "none") {
+        element.style.display = "none"
     }
 }
 
@@ -182,6 +251,7 @@ function updateServerSettings() {
         serverInfo.textContent = `Connected to ${serverIP}:${serverPort}`
     }
     serverSettings.appendChild(serverInfo)
+    serverSettings.appendChild(document.createElement("br"))
     const button = document.createElement("button")
     button.textContent = "Change"
     button.classList.add("btn", "waves-effect", "waves-light")
@@ -193,20 +263,125 @@ function updateServerSettings() {
 
 function updatePlayerSettings() {
     emptyElement(playerSettings)
+    // if there are no players yet, inform of spectator mode
+    if (!localPlayers.length) {
+        const element = document.createElement("div")
+        element.textContent = "You are spectating, add a player to start."
+        playerSettings.appendChild(element)
+        playerSettings.appendChild(document.createElement("hr"))
+    }
     localPlayers.forEach(player => {
         const element = document.createElement("div")
         element.classList.add("player")
         element.innerHTML =  `
         <div class="blob" style="background-color:${player.color};"></div>
-        <div>${player.name}</div>
-        <div>Controls: ????</div>`
+        <div>${player.name}</div>`
+        const button = document.createElement("button")
+        button.textContent = "Edit"
+        button.classList.add("btn", "waves-effect", "waves-light")
+        button.addEventListener("click", () => {
+            updateAddPlayer(true, player)
+            addPlayerModal.open()
+        })
         playerSettings.appendChild(element)
+        playerSettings.appendChild(button)
+        playerSettings.appendChild(document.createElement("hr"))
     })
     const addButton = document.createElement("button")
     addButton.textContent = "Add player"
     addButton.classList.add("btn", "waves-effect", "waves-light")
-    if (gameData.state === "connecting") {
-        addButton.setAttribute("disabled", "disabled")
-    }
+    addButton.addEventListener("click", () => {
+        updateAddPlayer()
+        addPlayerModal.open()
+    })
     playerSettings.appendChild(addButton)
+}
+
+function updateAddPlayer(edit = false, player) {
+    const title = addPlayer.querySelector("h3")
+    if (edit) {
+        title.textContent = "Edit a player"
+        playerColorField.value = player.color
+        playerColorField.disabled = true
+        playerNameField.value = player.name
+        playerNameField.disabled = true
+        if (player.controls.preset) {
+            controlSelect.value = player.controls.preset
+        } else {
+            controlSelect.value = "Custom"
+        }
+        fillControlFields(player.controls)
+        // onclick to override function
+        addPlayerButton.onclick = e => {
+            e.preventDefault()
+            const formValid = playerForm.checkValidity()
+            const selectValid = controlSelect.selectedIndex !== 0
+            if (formValid && selectValid) {
+                const editedPlayer = localPlayers.find(p => p.uuid === player.uuid)
+                if (controls[controlSelect.value]) {
+                    Object.assign(editedPlayer.controls, controls[controlSelect.value])
+                } else {
+                    Object.assign(editedPlayer.controls, getControls())
+                }
+                addPlayerModal.close()
+            }
+        }
+    } else {
+        title.textContent = "Add a new player"
+        playerColorField.value = "#FFFFFF"
+        playerColorField.disabled = false
+        playerNameField.value = null
+        playerNameField.disabled = false
+        controlSelect.selectedIndex = 0
+        emptyControlFields()
+        // onclick to override function
+        addPlayerButton.onclick = e => {
+            e.preventDefault()
+            const formValid = playerForm.checkValidity()
+            const selectValid = controlSelect.selectedIndex !== 0
+            if (formValid && selectValid) {
+                const [name, color] = getNameAndColor()
+                let ctrls
+                if (controls[controlSelect.value]) {
+                    ctrls = controls[controlSelect.value]
+                } else {
+                    ctrls = getControls()
+                }
+                const newPlayer = makeNewPlayer(name, color, ctrls)
+                localPlayers.push(newPlayer)
+                updatePlayerSettings()
+                addPlayerModal.close()
+            }
+        }
+    }
+    M.updateTextFields()
+    M.FormSelect.init(selects)
+}
+
+function fillControlFields(controls) {
+    controlUp.value = controls.up
+    controlDown.value = controls.down
+    controlLeft.value = controls.left
+    controlRight.value = controls.right
+}
+
+function emptyControlFields() {
+    controlUp.value = null
+    controlDown.value = null
+    controlLeft.value = null
+    controlRight.value = null
+}
+
+function getNameAndColor() {
+    return [playerNameField.value, playerColorField.value]
+}
+
+function getControls() {
+    return {
+        preset: null,
+        up: controlUp.value,
+        down: controlDown.value,
+        left: controlLeft.value,
+        right: controlRight.value
+    }
 }

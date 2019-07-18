@@ -21,9 +21,10 @@
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight updatePlayerList showPlayerList hidePlayerlist preferredIP
-preferredPort connectModal M updateServerSettings updatePlayerSettings
-dynamicScaling maxEntities */
+strokeWeight updatePlayerList updateAreaShrink showElement hideElement
+playerlist areaShrink preferredIP preferredPort connectModal M controls
+updateServerSettings updatePlayerSettings dynamicScaling maxEntities
+spectatorDisplay */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"
@@ -36,20 +37,6 @@ let lastCenter = [0, 0]
 let totalEntities
 const localPlayers = []
 
-const exampleControls = {
-    up: 38,
-    down: 40,
-    left: 37,
-    right: 39
-}
-
-const exampleControls2 = {
-    up: 87,
-    down: 83,
-    left: 65,
-    right: 68
-}
-
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
     // try to connect websocket
@@ -59,8 +46,8 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    localPlayers.push(makeNewPlayer("May", "orange", exampleControls))
-    localPlayers.push(makeNewPlayer("The cooler May", "cyan", exampleControls2))
+    // localPlayers.push(makeNewPlayer("May", "#FFA500", controls.Arrows))
+    // localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", controls.WASD))
 }
 
 function windowResized() {
@@ -78,11 +65,13 @@ function draw() {
     // center circle
     circle(0, 0, 5)
     if (gameData.state === "connecting") {
-        hidePlayerlist()
+        hideElement(playerlist)
+        hideElement(areaShrink)
         text("Ze blutüth device is ready to pair", 0, 0)
     }
     if (gameData.state === "lobby") {
-        hidePlayerlist()
+        hideElement(playerlist)
+        hideElement(areaShrink)
         const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
         // dividing to get seconds from nanoseconds
         translate(0, 64-windowHeight/2)
@@ -104,16 +93,16 @@ function draw() {
         })
     }
     if (gameData.state === "ready") {
-        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
-        // dividing to get seconds from nanoseconds
         scaleGame()
         drawAreas()
         drawFood()
         drawPlayers()
         // show players in list
-        showPlayerList()
+        showElement(playerlist)
         updatePlayerList(gameData.players)
         scale(1, -1) // flip y back to render text
+        const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
+        // dividing to get seconds from nanoseconds
         const scaledSize = gameData.area.init.r/10
         textSize(scaledSize)
         fill(255)
@@ -133,9 +122,19 @@ function draw() {
         scaleGame()
         drawAreas()
         drawFood()
-        showPlayerList()
+        showElement(playerlist)
         updatePlayerList(gameData.players)
         drawPlayers()
+        // overlay area countdown
+        const timeToNewArea = gameData.area.time
+        if (gameData.area.new.x) {
+            const countdown = Math.abs(Math.ceil(timeToNewArea / 1000000000))
+            // dividing to get seconds from nanoseconds
+            showElement(areaShrink)
+            updateAreaShrink(countdown)
+        } else {
+            hideElement(areaShrink)
+        }
         // send player moves to server
         const moves = []
         localPlayers.forEach(player => {
@@ -192,11 +191,13 @@ function connectSocket() {
 
 // Make players with name, color, and preferred controls for up/down/left/right
 function makeNewPlayer(name, color, controls) {
+    hideElement(spectatorDisplay)
     return {
         name,
         color,
         uuid: genUuid(),
         controls: {
+            preset: controls.preset,
             up: controls.up,
             down: controls.down,
             left: controls.left,
@@ -291,9 +292,7 @@ function drawPlayers() {
     gameData.players.forEach(player => {
         totalEntities += player.position.length
     })
-    console.log(`less total than max? ${totalEntities < maxEntities}`)
     const drawFactor = Math.ceil(totalEntities/maxEntities)
-    console.log(`factor: ${drawFactor}`)
     gameData.players.forEach(player => {
         // make rainbow option and other magic words
         fill(player.color)
@@ -301,7 +300,8 @@ function drawPlayers() {
             fill("#777777")
         }
         player.position.forEach((position, i) => {
-            if (i % drawFactor !== 0) {
+            // always draw the head which is index 0
+            if (i % drawFactor !== 0 && i !== 0) {
                 return
             }
             if (player.shape === "square") {
