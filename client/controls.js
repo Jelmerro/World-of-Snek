@@ -20,8 +20,25 @@
 
 /* global localPlayers */
 
+const controls = {
+    "Arrows": {
+        preset: "Arrows",
+        up: "ArrowUp",
+        down: "ArrowDown",
+        left: "ArrowLeft",
+        right: "ArrowRight"
+    },
+    "WASD": {
+        preset: "WASD",
+        up: "KeyW",
+        down: "KeyS",
+        left: "KeyA",
+        right: "KeyD"
+    }
+}
+
 window.addEventListener("keydown", e => {
-    const key = e.keyCode
+    const key = e.code
     localPlayers.forEach(player => {
         if (player.controls.up === key) {
             player.controls.upPressed =  true
@@ -39,7 +56,7 @@ window.addEventListener("keydown", e => {
 })
 
 window.addEventListener("keyup", e => {
-    const key = e.keyCode
+    const key = e.code
     localPlayers.forEach(player => {
         if (player.controls.up === key) {
             player.controls.upPressed =  false

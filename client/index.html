@@ -29,6 +29,14 @@
     <div id="player-list">
 
     </div>
+    <!-- area shrink countdown in top right-->
+    <div id="area-shrink">
+
+    </div>
+    <!-- top display if client is in spectator mode -->
+    <div id="spectator-display">
+        You are currently spectating, press Escape to open menu.
+    </div>
     <!-- Modals -->
     <div id="menu" class="modal">
         <div class="modal-content">
@@ -55,7 +63,7 @@
                 <br>
                 <label>Max entities (decrease for better performance)</label>
                 <p class="range-field">
-                    <input id="max-entities" type="range" value="2000" min="0" max="5000" step="100">
+                    <input id="max-entities" type="range" value="2000" min="100" max="5000" step="100">
                 </p>
             </div>
         </div>
@@ -66,17 +74,64 @@
             <p>Leave fields empty for defaults</p>
             <div class="row">
                 <div class="input-field col s8">
-                    <input id= "server-ip" type="text">
+                    <input id="server-ip" type="text">
                     <label for="server-ip">Server IP</label>
                 </div>
                 <div class="input-field col s4">
-                    <input id= "server-port" type="text">
+                    <input id="server-port" type="text">
                     <label for="server-port">Server port</label>
                 </div>
             </div>
             <button id="connect" class="btn waves-effect waves-light">Connect</button>
             <button id="close-connect" class="btn waves-effect waves-light">Cancel</button>
         </div>
+    </div>
+    <div id="add-player" class="modal">
+        <form id="player-form">
+            <div class="modal-content">
+                <h3>Add a new player</h3>
+                <div class="row">
+                    <div class="col s2">
+                        <label>Color</label>
+                        <br>
+                        <input id="player-color" type="color" required>
+                    </div>
+                    <div class="input-field col s4">
+                        <input id="player-name" type="text" required>
+                        <label for="player-name">Name</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <select id="control-select" required>
+                            <option disabled selected>Choose a set of controls</option>
+                            <option value="WASD">WASD</option>
+                            <option value="Arrows">Arrows</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                        <label>Controls</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s3">
+                        <input id="up" type="text" disabled required>
+                        <label>Up</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="down" type="text" disabled required>
+                        <label>Down</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="left" type="text" disabled required>
+                        <label>Left</label>
+                    </div>
+                    <div class="input-field col s3">
+                        <input id="right" type="text" disabled required>
+                        <label>Right</label>
+                    </div>
+                </div>
+                <button id="confirm-player" class="btn waves-effect waves-light">Confirm</button>
+                <button id="close-player" class="btn waves-effect waves-light">Cancel</button>
+            </div>
+        </form>
     </div>
     <script src="p5.min.js"></script>
     <script src="p5.sound.min.js"></script>
