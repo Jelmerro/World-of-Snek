@@ -1,7 +1,7 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019 M4Yt
 * Copyright (C) 2019 Jelmer van Arnhem
+* Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -145,10 +145,10 @@ function draw() {
             if (player.controls.downPressed) {
                 player.controls.nextMove = "down"
             }
-            if (player.controls.leftPressed) {
+            if (player.controls.leftPressed && !player.controls.rightPressed) {
                 player.controls.nextMove = "left"
             }
-            if (player.controls.rightPressed) {
+            if (player.controls.rightPressed && !player.controls.leftPressed) {
                 player.controls.nextMove = "right"
             }
             moves.push({

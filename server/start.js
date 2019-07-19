@@ -185,7 +185,7 @@ const possiblyEatFood = (player, x, y) => {
             })[0]
             game.food.splice(game.food.indexOf(pickedUp), 1)
             player.score += 1
-            player.speed *= 1.1
+            player.speed = player.speed + SPEED * 0.1
             const appendLength = player.position.length * 1.2 - player.position.length
             const x = player.position[player.position.length - 1][0]
             const y = player.position[player.position.length - 1][1]
@@ -323,7 +323,7 @@ const updateFood = () => {
             }
             if (game.area.shape === "square") {
                 x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
-                y = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
+                y = game.area.current.y + game.area.current.r * (Math.random() * 2 - 1)
             }
             collision = false
             for (const player of game.players) {
@@ -339,6 +339,15 @@ const updateFood = () => {
             x: x,
             y: y,
             r: foodRadius
+        })
+        game.food = game.food.filter(f => {
+            if (game.area.shape === "circle") {
+                return distance(f.x, f.y, game.area.current.x, game.area.current.y) < game.area.current.r
+            }
+            if (game.area.shape === "square") {
+                return f.x < rightBorder && f.x > leftBorder && f.y > bottomBorder && f.y < topBorder
+            }
+            return false
         })
     }
 }
@@ -399,6 +408,7 @@ const startGame = autotrigger => {
         game.area.type = coinflip() ? "gradual" : "instant"
     }
     game.powerups = []
+    game.food = []
     game.area.init.x = 0
     game.area.init.y = 0
     if (game.settings.areaShape === "random") {
@@ -496,12 +506,17 @@ const processMessage = (clientId, message) => {
     message.color= message.color && message.color.slice(0, 100)
     message.moves = message.moves && message.moves.slice(0, 100)
     if (message.type === "newplayer" && game.state === "lobby") {
+        let playerCount = 0
         for (const c of clients) {
             for (const p of c.players) {
+                playerCount += 1
                 if (p.uuid === message.uuid) {
                     return
                 }
             }
+        }
+        if (playerCount >= settings.maxPlayers) {
+            return
         }
         console.log(`client ${clients[clientId].ip} added new player:`.green)
         console.log(` - ${message.uuid} ${message.name} ${message.color}`.blue)
@@ -656,35 +671,57 @@ const gameloop = delta => {
 }
 const informClients = () => {
     if (game.state === "game" || game.state === "ready") {
-        const filteredGame = Object.assign({}, game)
+        // Simplify the game object before sending it to all clients
+        const filteredGame = JSON.parse(JSON.stringify(game))
         filteredGame.settings = undefined
+        filteredGame.lastalive = undefined
+        for (const area of ["init", "current", "new"]) {
+            if (filteredGame.area[area].x) {
+                filteredGame.area[area].x = Math.round(filteredGame.area[area].x)
+                filteredGame.area[area].y = Math.round(filteredGame.area[area].y)
+                filteredGame.area[area].r = Math.round(filteredGame.area[area].r)
+            }
+        }
+        filteredGame.food = filteredGame.food.map(f => {
+            return {
+                x: Math.round(f.x),
+                y: Math.round(f.y),
+                r: Math.round(f.r)
+            }
+        })
+        filteredGame.players.forEach(player => {
+            player.position = player.position.map(pos => pos.map(Math.round))
+        })
         if (game.state === "game") {
             filteredGame.countdown = undefined
         }
+        const message = JSON.stringify(filteredGame)
         clients.forEach(c => {
             setTimeout(() => {
                 if (c.socket) {
-                    c.socket.send(JSON.stringify(filteredGame))
+                    c.socket.send(message)
                 }
             }, 0)
         })
     }
     if (game.state === "lobby") {
+        // Send the player list and other basic info while in the lobby
         const players = []
         clients.forEach(c => {
             c.players.forEach(p => {
                 players.push(p)
             })
         })
+        const message = JSON.stringify({
+            state: "lobby",
+            countdown: game.countdown,
+            players: players,
+            lastwinner: game.lastwinner
+        })
         clients.forEach(c => {
             setTimeout(() => {
                 if (c.socket) {
-                    c.socket.send(JSON.stringify({
-                        state: "lobby",
-                        countdown: game.countdown,
-                        players: players,
-                        lastwinner: game.lastwinner
-                    }))
+                    c.socket.send(message)
                 }
             }, 0)
         })
