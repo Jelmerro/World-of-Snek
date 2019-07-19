@@ -185,7 +185,7 @@ const possiblyEatFood = (player, x, y) => {
             })[0]
             game.food.splice(game.food.indexOf(pickedUp), 1)
             player.score += 1
-            player.speed *= 1.1
+            player.speed = player.speed + SPEED * 0.1
             const appendLength = player.position.length * 1.2 - player.position.length
             const x = player.position[player.position.length - 1][0]
             const y = player.position[player.position.length - 1][1]
