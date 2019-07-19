@@ -323,7 +323,7 @@ const updateFood = () => {
             }
             if (game.area.shape === "square") {
                 x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
-                y = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
+                y = game.area.current.y + game.area.current.r * (Math.random() * 2 - 1)
             }
             collision = false
             for (const player of game.players) {
@@ -339,6 +339,15 @@ const updateFood = () => {
             x: x,
             y: y,
             r: foodRadius
+        })
+        game.food = game.food.filter(f => {
+            if (game.area.shape === "circle") {
+                return distance(f.x, f.y, game.area.current.x, game.area.current.y) < game.area.current.r
+            }
+            if (game.area.shape === "square") {
+                return f.x < rightBorder && f.x > leftBorder && f.y > bottomBorder && f.y < topBorder
+            }
+            return false
         })
     }
 }
@@ -399,6 +408,7 @@ const startGame = autotrigger => {
         game.area.type = coinflip() ? "gradual" : "instant"
     }
     game.powerups = []
+    game.food = []
     game.area.init.x = 0
     game.area.init.y = 0
     if (game.settings.areaShape === "random") {
