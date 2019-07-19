@@ -496,12 +496,17 @@ const processMessage = (clientId, message) => {
     message.color= message.color && message.color.slice(0, 100)
     message.moves = message.moves && message.moves.slice(0, 100)
     if (message.type === "newplayer" && game.state === "lobby") {
+        let playerCount = 0
         for (const c of clients) {
             for (const p of c.players) {
+                playerCount += 1
                 if (p.uuid === message.uuid) {
                     return
                 }
             }
+        }
+        if (playerCount >= settings.maxPlayers) {
+            return
         }
         console.log(`client ${clients[clientId].ip} added new player:`.green)
         console.log(` - ${message.uuid} ${message.name} ${message.color}`.blue)
