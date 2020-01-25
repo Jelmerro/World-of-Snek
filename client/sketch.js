@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019 Jelmer van Arnhem
+* Copyright (C) 2019-2020 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -178,7 +178,19 @@ function connectSocket() {
         updatePlayerSettings()
     }
     socket.onmessage = e => {
-        gameData = JSON.parse(e.data)
+        const oldGameData = JSON.parse(JSON.stringify(gameData))
+        const newGameData = JSON.parse(e.data)
+        newGameData.players.forEach(player => {
+            if (oldGameData.players) {
+                const oldPlayer = oldGameData.players.find(p => p.uuid === player.uuid)
+                if (oldPlayer) {
+                    if (oldPlayer.position && player.position) {
+                        player.position = player.position.concat(oldPlayer.position).slice(0, player.length)
+                    }
+                }
+            }
+        })
+        gameData = newGameData
     }
     socket.onclose = () => {
         gameData.state = "connecting"

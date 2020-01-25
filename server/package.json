@@ -2,6 +2,9 @@
   "name": "world-of-snek",
   "version": "0.1.0",
   "description": "Snake Battle Royal",
+  "scripts": {
+    "start": "node start"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jelmerro/World-of-Snek.git"
