@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019 Jelmer van Arnhem
+* Copyright (C) 2019-2020 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -669,10 +669,12 @@ const gameloop = delta => {
     }
     game.countdown -= delta
 }
+let oldGameState = {}
 const informClients = () => {
     if (game.state === "game" || game.state === "ready") {
         // Simplify the game object before sending it to all clients
         const filteredGame = JSON.parse(JSON.stringify(game))
+        const gameState = JSON.parse(JSON.stringify(filteredGame))
         filteredGame.settings = undefined
         filteredGame.lastalive = undefined
         for (const area of ["init", "current", "new"]) {
@@ -690,7 +692,20 @@ const informClients = () => {
             }
         })
         filteredGame.players.forEach(player => {
+            player.direction = undefined
+            player.preferredMove = undefined
+            player.speed = undefined
+            player.length = player.position.length
             player.position = player.position.map(pos => pos.map(Math.round))
+            if (oldGameState.players) {
+                const oldPlayer = oldGameState.players.find(p => p.uuid === player.uuid)
+                if (oldPlayer) {
+                    const oldPositions = oldPlayer.position.map(
+                        pos => JSON.stringify(pos.map(Math.round)))
+                    player.position = player.position.filter(
+                        pos => !oldPositions.includes(JSON.stringify(pos)))
+                }
+            }
         })
         if (game.state === "game") {
             filteredGame.countdown = undefined
@@ -703,6 +718,7 @@ const informClients = () => {
                 }
             }, 0)
         })
+        oldGameState = gameState
     }
     if (game.state === "lobby") {
         // Send the player list and other basic info while in the lobby
