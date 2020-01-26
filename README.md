@@ -26,6 +26,7 @@ World of Snek
 # Server configuration
 
 To start the server, simply run `node start` from the server folder.
+You might need to install the dependencies first, using `npm install`.
 
 There are many settings that can be changed for running a server,
 including the area shrinking and the shapes used for the players and area.
