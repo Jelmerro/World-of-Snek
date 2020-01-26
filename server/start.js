@@ -474,30 +474,94 @@ const startGame = autotrigger => {
     }
     game.state = "ready"
 }
-
 const stopGame = () => {
     console.log("game has ended".green)
     game.countdown = LOBBYCOUNTDOWN
     game.state = "lobby"
 }
-
+const commands = [
+    {
+        command: "game start",
+        description: "Start a new game now if enough players are in the lobby",
+        action: () => {
+            if (game.state === "lobby") {
+                startGame()
+            } else {
+                console.log("A game is already running".yellow)
+            }
+        }
+    },
+    {
+        command: "game stop",
+        description: "Stop the current game if one is running, no winner will be selected",
+        action: () => {
+            if (game.state === "ready") {
+                console.log("The game is still starting".yellow)
+            } else if (game.state === "game") {
+                stopGame()
+            } else {
+                console.log("No game is running yet".yellow)
+            }
+        }
+    },
+    {
+        command: "settings",
+        description: "List all the currently active settings",
+        action: () => {
+            printSettings()
+        }
+    },
+    {
+        command: "settings ",
+        syntax: "settings <setting> <value>",
+        description: "Change a server setting, will be used when starting the next game",
+        acceptsArgs: true,
+        action: input => {
+            const startupOnlySettings = [
+                "serverPort", "websitePort", "serverOnly"
+            ]
+            const setting = input.split(" ")[0]
+            const value = input.split(" ").slice(1).join(",")
+            if (startupOnlySettings.includes(setting)) {
+                console.log("This setting can only be changed when starting the server".red)
+            } else {
+                const newSettings = {}
+                newSettings[setting] = value
+                parseAndApplySettings(newSettings)
+            }
+        }
+    },
+    {
+        command: "help",
+        description: "Show this list of commands",
+        action: () => {
+            console.log("These are the possible commands:".green)
+            for (const c of commands) {
+                if (c.syntax) {
+                    console.log(` ${"-".green} ${c.syntax.yellow} ${c.description.blue}`)
+                } else {
+                    console.log(` ${"-".green} ${c.command.yellow} ${c.description.blue}`)
+                }
+            }
+        }
+    },
+    {
+        command: "exit",
+        description: "Stop all World of Snek activities and exit",
+        action: () => {
+            console.log("Bye".green)
+            process.exit(0)
+        }
+    }
+]
 const processCLI = message => {
-    if (message === "start") {
-        if (game.state === "lobby") {
-            startGame()
-        } else {
-            console.log("a game is already running".yellow)
-        }
-    } else if (message === "stop") {
-        if (game.state === "ready") {
-            console.log("the game is still starting".yellow)
-        } else if (game.state === "game") {
-            stopGame()
-        } else {
-            console.log("no game is running yet".yellow)
-        }
+    const command = commands.find(c => {
+        return c.command === message || (c.acceptsArgs && message.startsWith(c.command))
+    })
+    if (command) {
+        command.action(message.replace(command.command, ""))
     } else {
-        console.log("unknown command".red)
+        console.log("Unknown command, use 'help' for details".red)
     }
 }
 const processMessage = (clientId, message) => {
@@ -746,15 +810,18 @@ const informClients = () => {
 
 // SETTINGS
 
-const defaultSetings = {
-    maxPlayers: 69, //any integer above 0
-    areaShape: "random", //random, circle, square
-    wrap: "random", //random, yes, no
-    playerShape: "random", //random, circle, square
-    shrinkType: "random", //random, gradual, instant
-    shrinkSpeed: "random", //random, fast, normal, slow
-    shrinkTimeout: "random", //random, fast, normal, slow, never (not on random)
-    powerupsRate: "random", //random, low, medium, high
+const defaultSettings = {
+    areaShape: "random",
+    wrap: "random",
+    playerShape: "random",
+    shrinkType: "random",
+    shrinkSpeed: "random",
+    shrinkTimeout: "random",
+    powerupsRate: "random",
+    powerupsDespawn: "random",
+    foodCount: "random",
+    gamemode: "random",
+    maxPlayers: 69,
     enabledPowerups: [
         "superspeed",
         "speedup",
@@ -762,64 +829,133 @@ const defaultSetings = {
         "cornerup",
         "cornerdown",
         "sizeup",
-        "sizedown"
+        "sizedown",
+        "mirrorcontrols",
+        "flipshape"
     ],
-    powerupsDespawn: "random", //random, fast, slow, never (not on random)
-    foodCount: "random", //random, 1, players
-    gamemode: "random", //random, lastalive, score
-    port: 7635
+    serverPort: 7635,
+    websitePort: 8000,
+    serverOnly: false
 }
-const settings = JSON.parse(JSON.stringify(defaultSetings))
-if (args.maxPlayers && Number(args.maxPlayers) > 1) {
-    settings.maxPlayers = Number(args.maxPlayers)
+const selectOptions = {
+    areaShape: ["random", "circle", "square"],
+    wrap: ["random", "yes", "no"],
+    playerShape: ["random", "circle", "square"],
+    shrinkType: ["random", "gradual", "instant"],
+    shrinkSpeed: ["random", "fast", "normal", "slow"],
+    shrinkTimeout: ["random", "fast", "normal", "slow", "never"], //never will not appear on random
+    powerupsRate: ["random", "low", "medium", "high"],
+    powerupsDespawn: ["random", "fast", "slow", "never"], //never will not appear on random
+    foodCount: ["random", "1", "players"],
+    gamemode: ["random", "lastalive", "score"]
 }
-if (args.areaShape && ["random", "circle", "square"].includes(String(args.areaShape))) {
-    settings.areaShape = String(args.areaShape)
+const settingsDescriptions = {
+    areaShape: "The shape of the playing area",
+    wrap: "Should player be allowed to wrap to the other side of the area",
+    playerShape: "Shape of the player, this influences the movement options",
+    shrinkType: "The transition type to use when shrinking the area",
+    shrinkSpeed: "The amount of time it takes to complete an area shrink",
+    shrinkTimeout: "The timeout period between shrinking the area",
+    powerupsRate: "The rate at which new powerups will appear in the area",
+    powerupsDespawn: "The speed at which powerups in the area will despawn",
+    foodCount: "The number of food elements in the area at a single moment",
+    gamemode: "Which strategy will determine the winner of the game?",
+    maxPlayers: "The maximum amount of players to join the server",
+    enabledPowerups: "A list of powerups that will be enabled on the server\n  You can specify the same powerup multiple times to increase the number of occurrences",
+    serverPort: "Port number of the World of Snek server application",
+    websitePort: "Port number of the client website",
+    serverOnly: "When provided, no website will be hosted, only runs the server"
 }
-if (args.wrap && ["random", "yes", "no"].includes(String(args.wrap))) {
-    settings.wrap = String(args.wrap)
+const printSettings = () => {
+    console.log("Current settings:".yellow, JSON.stringify(settings, null, 2).yellow)
 }
-if (args.playerShape && ["random", "circle", "square"].includes(String(args.playerShape))) {
-    settings.playerShape = String(args.playerShape)
+if (args.help) {
+    console.log("World of Snek - Server help\n".green)
+    console.log("You can start the server without arguments to get started,".blue)
+    console.log("or pass any of these arguments listed to change the settings\n".blue)
+    for (const setting of Object.keys(defaultSettings)) {
+        console.log(`--${setting}`.green, "\n  default:", String(defaultSettings[setting]).yellow)
+        console.log(`  ${settingsDescriptions[setting]}`)
+        if (selectOptions[setting]) {
+            console.log("  Options:", String(selectOptions[setting]).blue)
+        }
+        console.log()
+    }
+    process.exit(0)
 }
-if (args.shrinkType && ["random", "gradual", "instant", "never"].includes(String(args.shrinkType))) {
-    settings.shrinkType = String(args.shrinkType)
+if (args._ && args._.length > 0) {
+    console.log(`Trailing arguments: ${args._}`.red)
+    console.log("Use --help to see the list of options".blue)
+    process.exit(1)
 }
-if (args.shrinkSpeed && ["random", "fast", "normal", "slow"].includes(String(args.shrinkSpeed))) {
-    settings.shrinkSpeed = String(args.shrinkSpeed)
-}
-if (args.shrinkTimeout && ["random", "fast", "normal", "slow"].includes(String(args.shrinkTimeout))) {
-    settings.shrinkTimeout = String(args.shrinkTimeout)
-}
-if (args.powerupsRate && ["random", "low", "medium", "high"].includes(String(args.powerupsRate))) {
-    settings.powerupsRate = String(args.powerupsRate)
-}
-if (args.enabledPowerups && Array.isArray(args.enabledPowerups)) {
-    settings.enabledPowerups = []
-    for (const powerup of args.enabledPowerups) {
-        if (defaultSetings.enabledPowerups.includes(powerup)) {
-            if (!settings.enabledPowerups.includes(powerup)) {
-                settings.enabledPowerups.push(powerup)
+const settings = JSON.parse(JSON.stringify(defaultSettings))
+const parseAndApplySettings = (newSettings, exitOnFail = false) => {
+    for (const arg of Object.keys(newSettings)) {
+        if (!Object.keys(defaultSettings).includes(arg) && !["serverOnly", "_"].includes(arg)) {
+            console.log(`Unknown setting: ${arg}`.red)
+            if (exitOnFail) {
+                console.log("Use --help to see the list of options".blue)
+                process.exit(1)
             }
         }
     }
+    for (const option of Object.keys(selectOptions)) {
+        if (newSettings[option]) {
+            if (selectOptions[option].includes(String(newSettings[option]))) {
+                settings[option] = String(newSettings[option])
+            } else {
+                console.log(`Setting '${option}' must be set to one of: ${selectOptions[option]}`.red)
+                if (exitOnFail) {
+                    console.log("Use --help to see the list of options".blue)
+                    process.exit(1)
+                }
+            }
+        }
+    }
+    if (newSettings.maxPlayers) {
+        if (Number(newSettings.maxPlayers) > 1) {
+            settings.maxPlayers = Number(newSettings.maxPlayers)
+        } else {
+            console.log("Maximum number of players must be at least 2".red)
+            if (exitOnFail) {
+                console.log("Use --help to see the list of options".blue)
+                process.exit(1)
+            }
+        }
+    }
+    if (newSettings.enabledPowerups) {
+        settings.enabledPowerups = []
+        for (const powerup of newSettings.enabledPowerups.split(/[, ]+/)) {
+            if (defaultSettings.enabledPowerups.includes(powerup)) {
+                settings.enabledPowerups.push(powerup)
+            } else {
+                console.log(`Ignoring unknown powerup '${powerup}'`.yellow)
+            }
+        }
+    }
+    if (newSettings.serverPort) {
+        if (Number(newSettings.serverPort) > 0 && Number(newSettings.serverPort) < 100000) {
+            settings.serverPort = Number(newSettings.serverPort)
+        } else {
+            console.log("Invalid server port number, can't start the server".red)
+            process.exit(1)
+        }
+    }
+    if (newSettings.websitePort) {
+        if (Number(newSettings.websitePort) > 0 && Number(newSettings.websitePort) < 100000) {
+            settings.websitePort = Number(newSettings.websitePort)
+        } else {
+            console.log("Invalid website port number, can't host the website, skipping server".red)
+            process.exit(1)
+        }
+    }
+    if (settings.serverPort === settings.websitePort) {
+        console.log("Port numbers can not be the same!".red)
+        process.exit(1)
+    }
+    settings.serverOnly = !!newSettings.serverOnly
 }
-if (args.powerupsDespawn && ["random", "fast", "slow", "never"].includes(String(args.powerupsDespawn))) {
-    settings.powerupsDespawn = String(args.powerupsDespawn)
-}
-if (args.foodCount && ["random", "1", "players"].includes(String(args.foodCount))) {
-    settings.foodCount = String(args.foodCount)
-}
-if (args.gamemode && ["random", "lastalive", "score"].includes(String(args.gamemode))) {
-    settings.gamemode = String(args.gamemode)
-}
-if (args.port && Number(args.port) > 0 && Number(args.port) < 100000) {
-    settings.port = Number(args.port)
-}
-let serveWWWCLientFiles = true
-if (args.serverOnly || args.noWWWServe) {
-    serveWWWCLientFiles = false
-}
+parseAndApplySettings(args, true)
 
 // INIT
 
@@ -846,7 +982,7 @@ const game = {
 
 if (!module.parent) {
     const server = new ws.Server({
-        port: settings.port
+        port: settings.serverPort
     })
     server.on("connection", (client, req) => {
         const clientId = clients.length
@@ -894,17 +1030,18 @@ if (!module.parent) {
     }
     setInterval(informClients, 10)
     setInterval(timer, 10)
-    if (serveWWWCLientFiles) {
-        www()
+    if (!settings.serverOnly) {
+        www(settings.websitePort)
         console.log("Client started!".green)
         const interfaces = os.networkInterfaces()
         Object.keys(interfaces).forEach(i => {
             interfaces[i].forEach(l => {
-                console.log(` - http://${l.address}:${8000}`.blue)
+                console.log(` - http://${l.address}:${settings.websitePort}`.blue)
             })
         })
-        console.log("\n")
+        console.log("")
     }
-    console.log("Current settings:".yellow, JSON.stringify(settings, null, 2).yellow)
-    console.log("\n\nServer started!".green)
+    printSettings()
+    console.log("\nServer started!".green)
+    console.log(" - You can interact with the server by typing commands!\n".blue)
 }
