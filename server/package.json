@@ -1,7 +1,7 @@
 {
   "name": "world-of-snek",
   "version": "0.1.0",
-  "description": "Snake Battle Royal",
+  "description": "Snake Battle Royale",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jelmerro/World-of-Snek.git"
