@@ -27,35 +27,34 @@ const www = require("./www")
 
 // UTIL
 
-const coinflip = (chance=0.5) => Math.random() < chance
+const coinflip = (chance = 0.5) => Math.random() < chance
 const TAU = 2 * Math.PI
 const PI = Math.PI
 const SPEED = 10
 const AREASIZE = 300
 const INITIALLENGTH = 200
-const INITIALSIZE = 20
 const SHRINKTIMEOUT = 10000000000 // 10 seconds - in nanoseconds
 const SHRINKSPEED = 10000000000 // 10 seconds - in nanoseconds
 const READYCOUNTDOWN = 3000000000 // 3 seconds - in nanoseconds
 const LOBBYCOUNTDOWN = 10000000000 // 10 seconds - in nanoseconds
+const FOODRADIUS = 10
+const POWERUPRADIUS = 20
+const PLAYERRADIUS = 20
 const rotationToDirection = r => {
     if (Math.sin(r) > 0 && Math.sin(r) > Math.abs(Math.cos(r))) {
-        return "down"
-    } else if (Math.cos(r) > 0 && Math.cos(r) > Math.abs(Math.sin(r))) {
-        return "left"
-    } else if (Math.sin(r) < 0 && -Math.sin(r) > Math.abs(Math.cos(r))) {
         return "up"
-    } else if (Math.cos(r) < 0 && -Math.cos(r) > Math.abs(Math.sin(r))) {
+    } else if (Math.cos(r) > 0 && Math.cos(r) > Math.abs(Math.sin(r))) {
         return "right"
+    } else if (Math.sin(r) < 0 && -Math.sin(r) > Math.abs(Math.cos(r))) {
+        return "down"
+    } else if (Math.cos(r) < 0 && -Math.cos(r) > Math.abs(Math.sin(r))) {
+        return "left"
     }
-    console.log("THIS SHOULDN'T HAPPEN! POSSIBLE TODO: FIX THE CHECKS ABOVE!")
-    console.log("rotation value with an issue:", r)
-    return ["down", "left", "up", "right"][Math.floor(Math.random) * 4]
 }
 const distance = (x, y, x2, y2) => {
     return Math.sqrt(Math.pow(x - x2, 2) + Math.pow(y - y2, 2))
 }
-const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
+const checkOutOfBoundsAndWrap = (player, x, y, allowWrap = true) => {
     if (game.area.shape === "circle") {
         if (distance(x, y, game.area.current.x, game.area.current.y) > game.area.current.r) {
             if (game.wrap && allowWrap) {
@@ -89,25 +88,25 @@ const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
         if (game.wrap && allowWrap) {
             if (x < leftBorder) {
                 x = x + game.area.current.r * 2 - 1
-                if (player.shape === "square") {
+                if (currentPlayerShape(player) === "square") {
                     player.direction = "left"
                 }
             }
             if (x > rightBorder) {
                 x = x - game.area.current.r * 2 + 1
-                if (player.shape === "square") {
+                if (currentPlayerShape(player) === "square") {
                     player.direction = "right"
                 }
             }
             if (y > topBorder) {
                 y = y - game.area.current.r * 2 + 1
-                if (player.shape === "square") {
+                if (currentPlayerShape(player) === "square") {
                     player.direction = "up"
                 }
             }
             if (y < bottomBorder) {
                 y = y + game.area.current.r * 2 - 1
-                if (player.shape === "square") {
+                if (currentPlayerShape(player) === "square") {
                     player.direction = "down"
                 }
             }
@@ -117,61 +116,116 @@ const checkOutOfBoundsAndWrap = (player, x, y, allowWrap=true) => {
         return [x, y]
     }
 }
+const currentPlayerShape = player => {
+    if (Object.keys(player.powerups).includes("flipshape")) {
+        return player.shape === "square" ? "circle" : "square"
+    }
+    return player.shape
+}
+const currentPlayerSize = player => {
+    let size = PLAYERRADIUS
+    if (Object.keys(player.powerups).includes("sizeup")) {
+        size *= 2
+    }
+    if (Object.keys(player.powerups).includes("sizedown")) {
+        size /= 2
+    }
+    return size
+}
 const checkForCollisions = (currentPlayer, x, y) => {
+    if (Object.keys(currentPlayer.powerups).includes("ghost")) {
+        return
+    }
     for (const p of game.players) {
-        if (!currentPlayer.alive) {
+        if (!currentPlayer.alive || Object.keys(p.powerups).includes("ghost")) {
             break
         }
         for (const position of p.position) {
-            if (currentPlayer.shape === "square") {
-                if (p.shape === "square") {
-                    //square, square
-                    if (currentPlayer === p) {
-                        let playerMovingX = x
-                        let playerMovingY = y
-                        if (p.direction === "up") {
-                            playerMovingY += 20
-                        }
-                        if (p.direction === "down") {
-                            playerMovingY -= 20
-                        }
-                        if (p.direction === "left") {
-                            playerMovingX -= 20
-                        }
-                        if (p.direction === "right") {
-                            playerMovingX += 20
-                        }
-                        if (Math.abs(playerMovingX - position[0]) < p.size && Math.abs(playerMovingY - position[1]) < p.size) {
-                            p.alive = false
-                            break
-                        }
-                    } else if (Math.abs(x - position[0]) < currentPlayer.size + p.size && Math.abs(y - position[1]) < currentPlayer.size + p.size) {
-                        currentPlayer.alive = false
+            if (currentPlayerShape(currentPlayer) === "square" && currentPlayerShape(p) === "square") {
+                //square, square
+                if (currentPlayer === p) {
+                    if (typeof p.direction !== "string") {
                         break
                     }
-                }
-                if (p.shape === "circle") {
-                    //square, circle
+                    let playerMovingX = x
+                    let playerMovingY = y
+                    if (p.direction === "up") {
+                        playerMovingY += currentPlayerSize(p)
+                    }
+                    if (p.direction === "down") {
+                        playerMovingY -= currentPlayerSize(p)
+                    }
+                    if (p.direction === "left") {
+                        playerMovingX -= currentPlayerSize(p)
+                    }
+                    if (p.direction === "right") {
+                        playerMovingX += currentPlayerSize(p)
+                    }
+                    if (Math.abs(playerMovingX - position[0]) < currentPlayerSize(p) && Math.abs(playerMovingY - position[1]) < currentPlayerSize(p)) {
+                        p.alive = false
+                        break
+                    }
+                } else if (Math.abs(x - position[0]) < currentPlayerSize(currentPlayer) + currentPlayerSize(p) && Math.abs(y - position[1]) < currentPlayerSize(currentPlayer) + currentPlayerSize(p)) {
+                    currentPlayer.alive = false
+                    break
                 }
             }
-            if (currentPlayer.shape === "circle") {
-                if (p.shape === "square") {
-                    //circle, square
-                }
-                if (p.shape === "circle") {
-                    //circle, circle
-                    if (currentPlayer === p) {
-                        const playerMovingX = x + 20 * Math.cos(p.direction)
-                        const playerMovingY = y + 20 * Math.sin(p.direction)
-                        if (distance(playerMovingX, playerMovingY, position[0], position[1]) < p.size) {
-                            p.alive = false
-                            break
-                        }
-                    } else if (distance(x, y, position[0], position[1]) < p.size + currentPlayer.size) {
-                        currentPlayer.alive = false
+            if (currentPlayerShape(currentPlayer) === "circle" && currentPlayerShape(p) === "circle") {
+                //circle, circle
+                if (currentPlayer === p) {
+                    if (typeof p.direction !== "number") {
                         break
                     }
+                    const playerMovingX = x + currentPlayerSize(p) * Math.cos(p.direction)
+                    const playerMovingY = y + currentPlayerSize(p) * Math.sin(p.direction)
+                    if (distance(playerMovingX, playerMovingY, position[0], position[1]) < currentPlayerSize(p)) {
+                        p.alive = false
+                        break
+                    }
+                } else if (distance(x, y, position[0], position[1]) < currentPlayerSize(p) + currentPlayerSize(currentPlayer)) {
+                    currentPlayer.alive = false
+                    break
                 }
+            }
+            if (currentPlayerShape(currentPlayer) !== currentPlayerShape(p)) {
+                //square, circle
+                //note that this comparison can never be called for the same player
+                //check for that are therefor left out of this collisions calculation
+                const circleX = currentPlayerShape(currentPlayer) === "circle" ? x : position[0]
+                const circleY = currentPlayerShape(currentPlayer) === "circle" ? y : position[1]
+                const circleR = currentPlayerShape(currentPlayer) === "circle" ? currentPlayerSize(currentPlayer) : currentPlayerSize(p)
+                const squareX = currentPlayerShape(currentPlayer) === "square" ? x : position[0]
+                const squareY = currentPlayerShape(currentPlayer) === "square" ? y : position[1]
+                const squareR = currentPlayerShape(currentPlayer) === "square" ? currentPlayerSize(currentPlayer) : currentPlayerSize(p)
+                const angle = Math.atan2(circleY - squareY, circleX - squareX) + PI
+                const newX = circleX + circleR * Math.cos(angle)
+                const newY = circleY + circleR * Math.sin(angle)
+                if (newX > squareX - squareR) {
+                    if (newX < squareX + squareR) {
+                        if (newY > squareY - squareR) {
+                            if (newY < squareY + squareR) {
+                                currentPlayer.alive = false
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+const possiblyUsePowerup = (player, x, y) => {
+    const allPowerups = JSON.parse(JSON.stringify(game.powerups))
+    for (const powerup of allPowerups) {
+        if (distance(x, y, powerup.x, powerup.y) < currentPlayerSize(player) + POWERUPRADIUS) {
+            const pickedUp = game.powerups.filter(p => {
+                return p.x === powerup.x && p.y === powerup.y
+            })[0]
+            game.powerups.splice(game.powerups.indexOf(pickedUp), 1)
+            if (player.powerups[powerup.type]) {
+                player.powerups[powerup.type] += 5000000000
+            } else {
+                player.powerups[powerup.type] = 5000000000
             }
         }
     }
@@ -179,7 +233,7 @@ const checkForCollisions = (currentPlayer, x, y) => {
 const possiblyEatFood = (player, x, y) => {
     const allFood = JSON.parse(JSON.stringify(game.food))
     for (const food of allFood) {
-        if (distance(x, y, food.x, food.y) < player.size + food.r) {
+        if (distance(x, y, food.x, food.y) < currentPlayerSize(player) + FOODRADIUS) {
             const pickedUp = game.food.filter(f => {
                 return f.x === food.x && f.y === food.y
             })[0]
@@ -189,7 +243,7 @@ const possiblyEatFood = (player, x, y) => {
             const appendLength = player.position.length * 1.2 - player.position.length
             const x = player.position[player.position.length - 1][0]
             const y = player.position[player.position.length - 1][1]
-            for (let _ = 0;_ < appendLength;_++) {
+            for (let _ = 0; _ < appendLength; _++) {
                 player.position.push([x, y])
             }
         }
@@ -198,6 +252,7 @@ const possiblyEatFood = (player, x, y) => {
 const movePlayerIfValid = (player, x, y) => {
     const [wrappedX, wrappedY] = checkOutOfBoundsAndWrap(player, x, y)
     checkForCollisions(player, x, y)
+    possiblyUsePowerup(player, x, y)
     possiblyEatFood(player, x, y)
     if (player.alive) {
         player.position.unshift([wrappedX, wrappedY])
@@ -205,32 +260,38 @@ const movePlayerIfValid = (player, x, y) => {
     }
 }
 const moveCircle = (player, pixels) => {
-    if (typeof(player.direction) !== "number") {
-        //TODO verify these numbers once they are actually used
+    if (typeof (player.direction) !== "number") {
         if (player.direction === "left") {
-            player.direction = PI * 1.5
-        } else if (player.direction === "right") {
-            player.direction = PI * 0.5
-        } else if (player.direction === "up") {
-            player.direction = 0
-        } else if (player.direction === "down") {
             player.direction = PI
-        } else {
+        } else if (player.direction === "right") {
             player.direction = 0
+        } else if (player.direction === "up") {
+            player.direction = PI * 0.5
+        } else if (player.direction === "down") {
+            player.direction = PI * 1.5
         }
     }
     let cornerSpeed = 0.04
-    if (player.powerups.includes("cornerup")) {
-        cornerSpeed = 0.1
+    if (Object.keys(player.powerups).includes("cornerup")) {
+        cornerSpeed = 0.08
     }
-    if (player.powerups.includes("cornerdown")) {
+    if (Object.keys(player.powerups).includes("cornerdown")) {
         cornerSpeed = 0.01
     }
-    if (player.preferredMove === "left") {
-        player.direction += cornerSpeed
-    }
-    if (player.preferredMove === "right") {
-        player.direction -= cornerSpeed
+    if (Object.keys(player.powerups).includes("mirrorcontrols")) {
+        if (player.preferredMove === "left") {
+            player.direction -= cornerSpeed
+        }
+        if (player.preferredMove === "right") {
+            player.direction += cornerSpeed
+        }
+    } else {
+        if (player.preferredMove === "left") {
+            player.direction += cornerSpeed
+        }
+        if (player.preferredMove === "right") {
+            player.direction -= cornerSpeed
+        }
     }
     const [originalX, originalY] = player.position[0]
     const newX = originalX + pixels * Math.cos(player.direction)
@@ -238,21 +299,33 @@ const moveCircle = (player, pixels) => {
     movePlayerIfValid(player, newX, newY)
 }
 const moveSquare = (player, pixels) => {
-    if (["left", "right", "up", "down"].includes(player.preferredMove)) {
-        if (player.direction === "left" && player.preferredMove !== "right") {
-            player.direction = player.preferredMove
-        }
-        if (player.direction === "right" && player.preferredMove !== "left") {
-            player.direction = player.preferredMove
-        }
-        if (player.direction === "up" && player.preferredMove !== "down") {
-            player.direction = player.preferredMove
-        }
-        if (player.direction === "down" && player.preferredMove !== "up") {
-            player.direction = player.preferredMove
-        }
-    } else if (!["left", "right", "up", "down"].includes(player.direction)) {
+    if (!["left", "right", "up", "down"].includes(player.direction)) {
         player.direction = rotationToDirection(player.direction)
+    } else if (["left", "right", "up", "down"].includes(player.preferredMove)) {
+        let move = `${player.preferredMove}`
+        if (Object.keys(player.powerups).includes("mirrorcontrols")) {
+            if (move === "left") {
+                move = "right"
+            } else if (move === "right") {
+                move = "left"
+            } else if (move === "up") {
+                move = "down"
+            } else if (move === "down") {
+                move = "up"
+            }
+        }
+        if (player.direction === "left" && move !== "right") {
+            player.direction = move
+        }
+        if (player.direction === "right" && move !== "left") {
+            player.direction = move
+        }
+        if (player.direction === "up" && move !== "down") {
+            player.direction = move
+        }
+        if (player.direction === "down" && move !== "up") {
+            player.direction = move
+        }
     }
     const [originalX, originalY] = player.position[0]
     let newX = originalX
@@ -293,64 +366,103 @@ const shiftArea = () => {
         checkOutOfBoundsAndWrap(player, player.position[0][0], player.position[0][1], false)
     }
 }
+const withinArea = e => {
+    const leftBorder = game.area.current.x - game.area.current.r
+    const rightBorder = game.area.current.x + game.area.current.r
+    const topBorder = game.area.current.y + game.area.current.r
+    const bottomBorder = game.area.current.y - game.area.current.r
+    if (game.area.shape === "circle") {
+        return distance(e.x, e.y, game.area.current.x, game.area.current.y) < game.area.current.r
+    }
+    if (game.area.shape === "square") {
+        return e.x < rightBorder && e.x > leftBorder && e.y > bottomBorder && e.y < topBorder
+    }
+    return false
+}
+const generateEmptyLocation = r => {
+    let x = null
+    let y = null
+    let collision = true
+    while (collision) {
+        // Pick a location within the area
+        if (game.area.shape === "circle") {
+            x = game.area.current.x + game.area.current.r * Math.cos(Math.random() * TAU)
+            y = game.area.current.y + game.area.current.r * Math.sin(Math.random() * TAU)
+        }
+        if (game.area.shape === "square") {
+            x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
+            y = game.area.current.y + game.area.current.r * (Math.random() * 2 - 1)
+        }
+        collision = false
+        for (const player of game.players) {
+            for (const position of player.position) {
+                // Check if the position is far away from every player
+                if (distance(x, y, position[0], position[1]) < currentPlayerSize(player) + r * 2) {
+                    collision = true
+                    break
+                }
+            }
+        }
+    }
+    return [x, y]
+}
 const updateFood = () => {
     let desiredFoodCount = 1
     if (game.settings.foodCount === "players") {
         desiredFoodCount = game.players.length
     }
-    const leftBorder = game.area.current.x - game.area.current.r
-    const rightBorder = game.area.current.x + game.area.current.r
-    const topBorder = game.area.current.y + game.area.current.r
-    const bottomBorder = game.area.current.y - game.area.current.r
-    game.food = game.food.filter(f => {
-        if (game.area.shape === "circle") {
-            return distance(f.x, f.y, game.area.current.x, game.area.current.y) < game.area.current.r
-        }
-        if (game.area.shape === "square") {
-            return f.x < rightBorder && f.x > leftBorder && f.y > bottomBorder && f.y < topBorder
-        }
-        return false
-    })
-    const foodRadius = 10
+    game.food = game.food.filter(withinArea)
     while (desiredFoodCount > game.food.length) {
-        let x = null
-        let y = null
-        let collision = true
-        while (collision) {
-            if (game.area.shape === "circle") {
-                x = game.area.current.x + game.area.current.r * Math.cos(Math.random() * TAU)
-                y = game.area.current.y + game.area.current.r * Math.sin(Math.random() * TAU)
-            }
-            if (game.area.shape === "square") {
-                x = game.area.current.x + game.area.current.r * (Math.random() * 2 - 1)
-                y = game.area.current.y + game.area.current.r * (Math.random() * 2 - 1)
-            }
-            collision = false
-            for (const player of game.players) {
-                for (const position of player.position) {
-                    if (distance(x, y, position[0], position[1]) < player.size + foodRadius * 3) {
-                        collision = true
-                        break
-                    }
-                }
-            }
-        }
-        game.food.push({
-            x: x,
-            y: y,
-            r: foodRadius
-        })
-        game.food = game.food.filter(f => {
-            if (game.area.shape === "circle") {
-                return distance(f.x, f.y, game.area.current.x, game.area.current.y) < game.area.current.r
-            }
-            if (game.area.shape === "square") {
-                return f.x < rightBorder && f.x > leftBorder && f.y > bottomBorder && f.y < topBorder
-            }
-            return false
-        })
+        const [x, y] = generateEmptyLocation(FOODRADIUS)
+        game.food.push({x, y})
+        game.food = game.food.filter(withinArea)
     }
 }
+const updatePowerups = delta => {
+    for (const powerup of game.powerups) {
+        if (powerup.despawn !== undefined) {
+            powerup.despawn -= delta
+        }
+    }
+    game.powerups = game.powerups.filter(p => p.despawn > 0)
+    game.players.forEach(player => {
+        if (player.alive) {
+            Object.keys(player.powerups).forEach(powerup => {
+                player.powerups[powerup] -= delta
+                if (player.powerups[powerup] < 0) {
+                    delete player.powerups[powerup]
+                }
+            })
+        } else if (player.powerups.ghost !== undefined) {
+            delete player.powerups.ghost
+        }
+    })
+    if (!game.settings.enabledPowerups || game.settings.enabledPowerups.length === 0) {
+        game.powerups = []
+        return
+    }
+    game.powerups = game.powerups.filter(withinArea)
+    let chance = 1
+    if (game.settings.powerupsRate === "medium") {
+        chance = 5
+    } else if (game.settings.powerupsRate === "high") {
+        chance = 15
+    }
+    if (coinflip(chance * delta / 50000000000)) {
+        let despawn = 10000000000
+        if (game.settings.powerupsDespawn === "medium") {
+            despawn += 10000000000
+        }
+        if (game.settings.powerupsDespawn === "slow") {
+            despawn += 20000000000
+        }
+        const [x, y] = generateEmptyLocation(POWERUPRADIUS)
+        const type = settings.enabledPowerups[Math.floor(Math.random() * settings.enabledPowerups.length)]
+        game.powerups.push({x, y, type, despawn})
+        game.powerups = game.powerups.filter(withinArea)
+    }
+}
+
 // LOOPS & MAIN FUNCTIONS
 
 const startGame = autotrigger => {
@@ -365,7 +477,7 @@ const startGame = autotrigger => {
                 preferredMove: null,
                 alive: true,
                 position: [],
-                powerups: [],
+                powerups: {},
                 wins: p.wins,
                 speed: SPEED,
                 score: 0
@@ -407,6 +519,17 @@ const startGame = autotrigger => {
     if (game.settings.shrinkType === "random") {
         game.area.type = coinflip() ? "gradual" : "instant"
     }
+    if (game.settings.powerupsRate === "random") {
+        game.settings.powerupsRate = "low"
+        if (coinflip(0.3)) {
+            game.settings.powerupsRate = "medium"
+        } else if (coinflip(0.3)) {
+            game.settings.powerupsRate = "high"
+        }
+    }
+    if (game.settings.powerupsDespawn === "random") {
+        game.settings.powerupsDespawn = coinflip() ? "fast" : "slow"
+    }
     game.powerups = []
     game.food = []
     game.area.init.x = 0
@@ -423,10 +546,9 @@ const startGame = autotrigger => {
             const x = 0.7 * game.area.init.r * Math.cos(startRotation)
             const y = 0.7 * game.area.init.r * Math.sin(startRotation)
             p.direction = startRotation + PI
-            p.size = INITIALSIZE
             p.shape = "circle"
             p.position.push([x, y])
-            for (let i = 1;i < INITIALLENGTH;i++) {
+            for (let i = 1; i < INITIALLENGTH; i++) {
                 p.position.push([x + (i * Math.cos(startRotation)), y + (i * Math.sin(startRotation))])
             }
         })
@@ -436,21 +558,20 @@ const startGame = autotrigger => {
             const startRotation = TAU / game.players.length * index
             const x = 0.7 * game.area.init.r * Math.cos(startRotation)
             const y = 0.7 * game.area.init.r * Math.sin(startRotation)
-            p.direction = rotationToDirection(startRotation)
-            p.size = INITIALSIZE
+            p.direction = rotationToDirection(startRotation + PI)
             p.shape = "square"
             p.position.push([x, y])
-            for (let i = 1;i < INITIALLENGTH;i++) {
-                if (rotationToDirection(startRotation + PI) === "left") {
+            for (let i = 1; i < INITIALLENGTH; i++) {
+                if (rotationToDirection(startRotation) === "left") {
                     p.position.push([x - i, y])
                 }
-                if (rotationToDirection(startRotation + PI) === "right") {
+                if (rotationToDirection(startRotation) === "right") {
                     p.position.push([x + i, y])
                 }
-                if (rotationToDirection(startRotation + PI) === "up") {
+                if (rotationToDirection(startRotation) === "up") {
                     p.position.push([x, y + i])
                 }
-                if (rotationToDirection(startRotation + PI) === "down") {
+                if (rotationToDirection(startRotation) === "down") {
                     p.position.push([x, y - i])
                 }
             }
@@ -567,7 +688,7 @@ const processCLI = message => {
 const processMessage = (clientId, message) => {
     message.uuid = message.uuid && message.uuid.slice(0, 100)
     message.name = message.name && message.name.slice(0, 100)
-    message.color= message.color && message.color.slice(0, 100)
+    message.color = message.color && message.color.slice(0, 100)
     message.moves = message.moves && message.moves.slice(0, 100)
     if (message.type === "newplayer" && game.state === "lobby") {
         let playerCount = 0
@@ -656,12 +777,20 @@ const gameloop = delta => {
         }
         game.players.forEach(p => {
             if (p.alive) {
-                const pixels = delta / 100000000 * p.speed
-                if (p.shape === "circle") {
-                    moveCircle(p, pixels)
+                let pixels = delta / 100000000 * p.speed
+                if (Object.keys(p.powerups).includes("speedup")) {
+                    pixels *= 1.5
                 }
-                if (p.shape === "square") {
+                if (Object.keys(p.powerups).includes("speeddown")) {
+                    pixels /= 1.5
+                }
+                if (Object.keys(p.powerups).includes("superspeed")) {
+                    pixels *= 4
+                }
+                if (currentPlayerShape(p) === "square") {
                     moveSquare(p, pixels)
+                } else {
+                    moveCircle(p, pixels)
                 }
             }
         })
@@ -718,6 +847,7 @@ const gameloop = delta => {
             }
         }
         updateFood()
+        updatePowerups(delta)
     }
     if (game.state === "ready") {
         if (game.countdown < 0) {
@@ -831,7 +961,8 @@ const defaultSettings = {
         "sizeup",
         "sizedown",
         "mirrorcontrols",
-        "flipshape"
+        "flipshape",
+        "ghost"
     ],
     serverPort: 7635,
     websitePort: 8000,
