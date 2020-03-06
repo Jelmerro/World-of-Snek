@@ -46,8 +46,8 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    localPlayers.push(makeNewPlayer("May", "#FFA500", controls.Arrows))
-    localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", controls.WASD))
+    // localPlayers.push(makeNewPlayer("May", "#FFA500", controls.Arrows))
+    // localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", controls.WASD))
 }
 
 function windowResized() {
