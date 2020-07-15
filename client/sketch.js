@@ -62,8 +62,6 @@ function draw() {
     textSize(64)
     rectMode("center")
     translate(windowWidth/2, windowHeight/2)
-    // center circle
-    circle(0, 0, 5)
     if (gameData.state === "connecting") {
         hideElement(playerlist)
         hideElement(areaShrink)
@@ -92,14 +90,16 @@ function draw() {
             sendPlayerToServer(player)
         })
     }
-    if (gameData.state === "ready") {
+    if (["ready", "game"].includes(gameData.state)) {
         scaleGame()
         drawAreas()
         drawFood()
+        drawPowerups()
         drawPlayers()
-        // show players in list
         showElement(playerlist)
         updatePlayerList(gameData.players)
+    }
+    if (gameData.state === "ready") {
         scale(1, -1) // flip y back to render text
         const countdown = Math.abs(Math.ceil(gameData.countdown / 1000000000))
         // dividing to get seconds from nanoseconds
@@ -119,12 +119,6 @@ function draw() {
         text(countdown, 0, 16)
     }
     if (gameData.state === "game") {
-        scaleGame()
-        drawAreas()
-        drawFood()
-        showElement(playerlist)
-        updatePlayerList(gameData.players)
-        drawPlayers()
         // overlay area countdown
         const timeToNewArea = gameData.area.time
         if (gameData.area.new.x) {
@@ -311,15 +305,26 @@ function drawPlayers() {
         if (!player.alive) {
             fill("#777777")
         }
+        let shape = player.shape
+        if (Object.keys(player.powerups).includes("flipshape")) {
+            shape = shape === "square" ? "circle" : "square"
+        }
+        let size = 40
+        if (Object.keys(player.powerups).includes("sizeup")) {
+            size *=2
+        }
+        if (Object.keys(player.powerups).includes("sizedown")) {
+            size /=2
+        }
         player.position.forEach((position, i) => {
             // always draw the head which is index 0
             if (i % drawFactor !== 0 && i !== 0) {
                 return
             }
-            if (player.shape === "square") {
-                square(position[0], position[1], player.size*2)
-            } else if (player.shape === "circle") {
-                circle(position[0], position[1], player.size*2)
+            if (shape === "square") {
+                square(position[0], position[1], size)
+            } else if (shape === "circle") {
+                circle(position[0], position[1], size)
             }
         })
     })
@@ -328,6 +333,20 @@ function drawPlayers() {
 function drawFood() {
     gameData.food.forEach(food => {
         fill(255)
-        circle(food.x, food.y, food.r*2)
+        circle(food.x, food.y, 20)
+    })
+}
+
+function drawPowerups() {
+    gameData.powerups.forEach(powerup => {
+        //TODO color powerup according to powerup.type
+        fill("#ff00ff")
+        circle(powerup.x, powerup.y, 40)
+        translate(1, -1) // flip y back to render text
+        scale(1, -1) // flip y back to render text
+        //TODO fix text being at the wrong position, or remove it when colors are fixed
+        text(powerup.type, powerup.x, powerup.y)
+        translate(1, -1) // flip y back to render text
+        scale(1, -1) // flip y back to render text
     })
 }
