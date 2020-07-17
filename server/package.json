@@ -13,8 +13,8 @@
   },
   "homepage": "https://github.com/Jelmerro/World-of-Snek",
   "dependencies": {
-    "colors": "^1.3.3",
-    "minimist": "^1.2.0",
+    "colors": "^1.4.0",
+    "minimist": "^1.2.5",
     "ws": "^7.0.0"
   }
 }

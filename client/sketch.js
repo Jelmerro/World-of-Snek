@@ -22,9 +22,8 @@
 /* global resizeCanvas windowWidth windowHeight background translate stroke
 circle text textSize textAlign fill square rectMode noFill noStroke scale
 strokeWeight updatePlayerList updateAreaShrink showElement hideElement
-playerlist areaShrink preferredIP preferredPort connectModal M controls
-updateServerSettings updatePlayerSettings dynamicScaling maxEntities
-spectatorDisplay */
+playerlist areaShrink preferredIP preferredPort connectModal M maxEntities
+updateServerSettings updatePlayerSettings dynamicScaling spectatorDisplay */
 
 let socket, serverIP, serverPort
 const defaultIP = location.hostname || "localhost"

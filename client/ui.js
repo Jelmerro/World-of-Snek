@@ -1,5 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
+* Copyright (C) 2020 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -18,7 +19,6 @@
 
 "use strict"
 
-// hmm lekker uitje
 /* global M connectSocket gameData serverIP serverPort localPlayers controls
 makeNewPlayer */
 
@@ -62,11 +62,11 @@ let lastCountdown
 
 // init modals
 document.addEventListener("DOMContentLoaded", () => {
-    const modalInstances = M.Modal.init(modals, {dismissible: false})
+    M.Modal.init(modals, {dismissible: false})
     menuModal = M.Modal.getInstance(menu)
     connectModal = M.Modal.getInstance(connect)
     addPlayerModal = M.Modal.getInstance(addPlayer)
-    const selectInstances = M.FormSelect.init(selects)
+    M.FormSelect.init(selects)
 })
 
 window.addEventListener("keydown", e => {

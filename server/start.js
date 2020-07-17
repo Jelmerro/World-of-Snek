@@ -190,7 +190,7 @@ const checkForCollisions = (currentPlayer, x, y) => {
             if (currentPlayerShape(currentPlayer) !== currentPlayerShape(p)) {
                 //square, circle
                 //note that this comparison can never be called for the same player
-                //check for that are therefor left out of this collisions calculation
+                //checks for that are therefor left out of this collisions calculation
                 const circleX = currentPlayerShape(currentPlayer) === "circle" ? x : position[0]
                 const circleY = currentPlayerShape(currentPlayer) === "circle" ? y : position[1]
                 const circleR = currentPlayerShape(currentPlayer) === "circle" ? currentPlayerSize(currentPlayer) : currentPlayerSize(p)
@@ -974,9 +974,9 @@ const selectOptions = {
     playerShape: ["random", "circle", "square"],
     shrinkType: ["random", "gradual", "instant"],
     shrinkSpeed: ["random", "fast", "normal", "slow"],
-    shrinkTimeout: ["random", "fast", "normal", "slow", "never"], //never will not appear on random
+    shrinkTimeout: ["random", "fast", "normal", "slow", "never"],
     powerupsRate: ["random", "low", "medium", "high"],
-    powerupsDespawn: ["random", "fast", "slow", "never"], //never will not appear on random
+    powerupsDespawn: ["random", "fast", "slow", "never"],
     foodCount: ["random", "1", "players"],
     gamemode: ["random", "lastalive", "score"]
 }
