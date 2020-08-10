@@ -48,6 +48,10 @@ function setup() {
     }
     // localPlayers.push(makeNewPlayer("May", "#000000", controls.Arrows))
     // localPlayers.push(makeNewPlayer("The cooler May", "#333333", controls.WASD))
+    images.allcornerdown = loadImage("img/allcornerdown.png")
+    images.allmirrorcontrols = loadImage("img/allmirrorcontrols.png")
+    images.allsizeup = loadImage("img/allsizeup.png")
+    images.allspeeddown = loadImage("img/allspeeddown.png")
     images.superspeed = loadImage("img/superspeed.png")
     images.speedup = loadImage("img/speedup.png")
     images.speeddown = loadImage("img/speeddown.png")

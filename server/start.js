@@ -223,7 +223,15 @@ const possiblyUsePowerup = (player, x, y) => {
                 return p.x === powerup.x && p.y === powerup.y
             })[0]
             game.powerups.splice(game.powerups.indexOf(pickedUp), 1)
-            if (player.powerups[powerup.type]) {
+            if (powerup.type.startsWith("all")) {
+                game.players.filter(p => p.uuid !== player.uuid).forEach(p => {
+                    if (p.powerups[powerup.type.replace("all", "")]) {
+                        p.powerups[powerup.type.replace("all", "")] += 8000000000
+                    } else {
+                        p.powerups[powerup.type.replace("all", "")] = 8000000000
+                    }
+                })
+            } else if (player.powerups[powerup.type]) {
                 player.powerups[powerup.type] += 8000000000
             } else {
                 player.powerups[powerup.type] = 8000000000
@@ -993,6 +1001,10 @@ const defaultSettings = {
     maxPlayers: 69,
     maxPlayersPerClient: 10,
     enabledPowerups: [
+        "allcornerdown",
+        "allmirrorcontrols",
+        "allsizeup",
+        "allspeeddown",
         "superspeed",
         "speedup",
         "speeddown",
