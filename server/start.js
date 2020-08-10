@@ -28,6 +28,7 @@ const www = require("./www")
 // UTIL
 
 const coinflip = (chance = 0.5) => Math.random() < chance
+const randomNumber = (max = 1) => Math.floor(Math.random() * max)
 const TAU = 2 * Math.PI
 const PI = Math.PI
 const SPEED = 10
@@ -223,9 +224,9 @@ const possiblyUsePowerup = (player, x, y) => {
             })[0]
             game.powerups.splice(game.powerups.indexOf(pickedUp), 1)
             if (player.powerups[powerup.type]) {
-                player.powerups[powerup.type] += 5000000000
+                player.powerups[powerup.type] += 8000000000
             } else {
-                player.powerups[powerup.type] = 5000000000
+                player.powerups[powerup.type] = 8000000000
             }
         }
     }
@@ -424,7 +425,7 @@ const updatePowerups = delta => {
             powerup.despawn -= delta
         }
     }
-    game.powerups = game.powerups.filter(p => p.despawn > 0)
+    game.powerups = game.powerups.filter(p => !p.despawn || p.despawn > 0)
     game.players.forEach(player => {
         if (player.alive) {
             Object.keys(player.powerups).forEach(powerup => {
@@ -455,6 +456,9 @@ const updatePowerups = delta => {
         }
         if (game.settings.powerupsDespawn === "slow") {
             despawn += 20000000000
+        }
+        if (game.settings.powerupsDespawn === "never") {
+            despawn = undefined
         }
         const [x, y] = generateEmptyLocation(POWERUPRADIUS)
         const type = settings.enabledPowerups[Math.floor(Math.random() * settings.enabledPowerups.length)]
@@ -643,12 +647,16 @@ const commands = [
             ]
             const setting = input.split(" ")[0]
             const value = input.split(" ").slice(1).join(",")
-            if (startupOnlySettings.includes(setting)) {
+            if (!defaultSettings[setting]) {
+                console.log("This setting does not exist!".red)
+            } else if (startupOnlySettings.includes(setting)) {
                 console.log("This setting can only be changed when starting the server".red)
-            } else {
+            } else if (value) {
                 const newSettings = {}
                 newSettings[setting] = value
                 parseAndApplySettings(newSettings)
+            } else {
+                console.log(`Current value of '${setting}' is: ${settings[setting]}`.blue)
             }
         }
     },
@@ -685,23 +693,44 @@ const processCLI = message => {
         console.log("Unknown command, use 'help' for details".red)
     }
 }
+const randomColor = () => {
+    return `#${(30 + randomNumber(225)).toString(16)}`
+        + `${(30 + randomNumber(225)).toString(16)}`
+        + `${(30 + randomNumber(255)).toString(16)}`
+}
 const processMessage = (clientId, message) => {
-    message.uuid = message.uuid && message.uuid.slice(0, 100)
-    message.name = message.name && message.name.slice(0, 100)
-    message.color = message.color && message.color.slice(0, 100)
-    message.moves = message.moves && message.moves.slice(0, 100)
     if (message.type === "newplayer" && game.state === "lobby") {
+        if (!message.name || !message.color || !message.uuid) {
+            return
+        }
+        message.uuid = message.uuid.slice(0, 36)
+        message.name = message.name.slice(0, 30).trim()
+        if (clients[clientId].players.length >= settings.maxPlayersPerClient) {
+            return
+        }
         let playerCount = 0
         for (const c of clients) {
             for (const p of c.players) {
                 playerCount += 1
-                if (p.uuid === message.uuid) {
+                if (p.uuid === message.uuid || p.name === message.name) {
                     return
                 }
             }
         }
         if (playerCount >= settings.maxPlayers) {
             return
+        }
+        message.color = message.color.slice(0, 7)
+        if (!message.color.match(/^#[\dA-Fa-f]{6}$/)) {
+            return
+        }
+        const [red, blue, green] = [
+            parseInt(message.color.substring(1, 3), 16),
+            parseInt(message.color.substring(3, 5), 16),
+            parseInt(message.color.substring(5, 7), 16)
+        ]
+        if (red < 30 && blue < 30 && green < 30) {
+            message.color = randomColor()
         }
         console.log(`client ${clients[clientId].ip} added new player:`.green)
         console.log(` - ${message.uuid} ${message.name} ${message.color}`.blue)
@@ -712,17 +741,30 @@ const processMessage = (clientId, message) => {
             wins: 0
         })
     }
+    if (message.type === "deleteplayer") {
+        if (!message.uuid) {
+            return
+        }
+        message.uuid = message.uuid.slice(0, 36)
+        clients[clientId].players = clients[clientId].players.filter(
+            p => p.uuid !== message.uuid)
+    }
     if (message.type === "movement" && game.state === "game") {
+        message.moves = message.moves && message.moves.slice(
+            0, settings.maxPlayersPerClient)
+        if (!Array.isArray(message.moves)) {
+            return
+        }
         message.moves.forEach(move => {
             const playersWithCorrectUUID = game.players.filter(p => {
-                return p.uuid === move.uuid.slice(0, 100)
+                return p.uuid === move.uuid.slice(0, 36)
             })
             const clientOwnsThisPlayer = clients[clientId].players.filter(p => {
-                return p.uuid === move.uuid.slice(0, 100)
+                return p.uuid === move.uuid.slice(0, 36)
             }).length === 1
             if (playersWithCorrectUUID.length === 1 && clientOwnsThisPlayer) {
                 const index = game.players.indexOf(playersWithCorrectUUID[0])
-                game.players[index].preferredMove = move.dir.slice(0, 100)
+                game.players[index].preferredMove = move.dir.slice(0, 10)
             }
         })
     }
@@ -730,22 +772,18 @@ const processMessage = (clientId, message) => {
 const announceWinner = player => {
     if (player) {
         for (const c of clients) {
-            const winners = c.players.filter(p => p.uuid === player.uuid)
-            if (winners.length === 1) {
-                winners[0].wins += 1
-                game.lastwinner = winners[0]
+            const winner = c.players.filter(p => p.uuid === player.uuid)[0]
+            if (winner) {
+                winner.wins += 1
+                game.lastwinner = winner
                 console.log("the winner is:".green)
-                console.log(` - ${winners[0].uuid} ${winners[0].name} ${winners[0].color}`.blue)
-                break
-            } else {
-                console.log("it's a draw".green)
-                game.lastwinner = null
+                console.log(` - ${winner.uuid} ${winner.name} ${winner.color}`.blue)
+                return
             }
         }
-    } else {
-        console.log("it's a draw".green)
-        game.lastwinner = null
     }
+    console.log("it's a draw".green)
+    game.lastwinner = null
 }
 const gameloop = delta => {
     if (game.state === "game") {
@@ -869,8 +907,9 @@ const informClients = () => {
         // Simplify the game object before sending it to all clients
         const filteredGame = JSON.parse(JSON.stringify(game))
         const gameState = JSON.parse(JSON.stringify(filteredGame))
-        filteredGame.settings = undefined
-        filteredGame.lastalive = undefined
+        filteredGame.gamemode = filteredGame.settings.gamemode
+        delete filteredGame.settings
+        delete filteredGame.lastalive
         for (const area of ["init", "current", "new"]) {
             if (filteredGame.area[area].x) {
                 filteredGame.area[area].x = Math.round(filteredGame.area[area].x)
@@ -886,9 +925,9 @@ const informClients = () => {
             }
         })
         filteredGame.players.forEach(player => {
-            player.direction = undefined
-            player.preferredMove = undefined
-            player.speed = undefined
+            delete player.direction
+            delete player.preferredMove
+            delete player.speed
             player.length = player.position.length
             player.position = player.position.map(pos => pos.map(Math.round))
             if (oldGameState.players) {
@@ -952,6 +991,7 @@ const defaultSettings = {
     foodCount: "random",
     gamemode: "random",
     maxPlayers: 69,
+    maxPlayersPerClient: 10,
     enabledPowerups: [
         "superspeed",
         "speedup",
@@ -992,6 +1032,7 @@ const settingsDescriptions = {
     foodCount: "The number of food elements in the area at a single moment",
     gamemode: "Which strategy will determine the winner of the game?",
     maxPlayers: "The maximum amount of players to join the server",
+    maxPlayersPerClient: "The maximum amount of players that a single client can register",
     enabledPowerups: "A list of powerups that will be enabled on the server\n  You can specify the same powerup multiple times to increase the number of occurrences",
     serverPort: "Port number of the World of Snek server application",
     websitePort: "Port number of the client website",
@@ -1048,6 +1089,17 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
             settings.maxPlayers = Number(newSettings.maxPlayers)
         } else {
             console.log("Maximum number of players must be at least 2".red)
+            if (exitOnFail) {
+                console.log("Use --help to see the list of options".blue)
+                process.exit(1)
+            }
+        }
+    }
+    if (newSettings.maxPlayersPerClient) {
+        if (Number(newSettings.maxPlayersPerClient) >= 1) {
+            settings.maxPlayersPerClient = Number(newSettings.maxPlayersPerClient)
+        } else {
+            console.log("Maximum number of players per client must be at least 1".red)
             if (exitOnFail) {
                 console.log("Use --help to see the list of options".blue)
                 process.exit(1)
@@ -1116,6 +1168,14 @@ if (!module.parent) {
         port: settings.serverPort
     })
     server.on("connection", (client, req) => {
+        const clientAlreadyConnected = clients.find(
+            c => c.ip === req.connection.remoteAddress && c.socket)
+        if (clientAlreadyConnected) {
+            client.close()
+            console.log("duplicate client blocked, already connected:".red,
+                req.connection.remoteAddress.red)
+            return
+        }
         const clientId = clients.length
         console.log("new client connected:".green, req.connection.remoteAddress.green)
         clients.push({

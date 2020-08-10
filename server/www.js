@@ -25,7 +25,6 @@ const serve = (port = 8000) => {
     http.createServer((req, res) => {
         const requestUrl = `${__dirname}/../client/${req.url}`
         const requestUrlIndex = `${requestUrl}/index.html`
-        console.log(`${res.socket.remoteAddress} - ${req.url}`.grey)
         try {
             if (isFile(requestUrl)) {
                 fs.createReadStream(requestUrl).pipe(res)

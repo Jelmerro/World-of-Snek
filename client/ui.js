@@ -20,7 +20,7 @@
 "use strict"
 
 /* global M connectSocket gameData serverIP serverPort localPlayers controls
-makeNewPlayer */
+makeNewPlayer removePlayer */
 
 const playerlist = document.getElementById("player-list")
 const areaShrink = document.getElementById("area-shrink")
@@ -191,20 +191,38 @@ function emptyElement(element) {
 
 function playerElement(player) {
     const element = document.createElement("div")
-    element.className = "player"
-    element.innerHTML =  `
+    element.innerHTML =  `<div class="player">
     <div class="blob ${player.shape}" style="background-color:${player.color};">
     </div>
     <div class="name">${player.name}</div>
     <div class="wins">Wins: ${player.wins}</div>
-    <div class="score">Score: ${player.score}</div>`
+    <div class="score">Score: ${player.score}</div></div>`
+    if (player.powerups && player.alive && Object.keys(player.powerups).length > 0) {
+        let powerups = `<div class="powerups">`
+        Object.keys(player.powerups).forEach(p => {
+            powerups += `<div><img src="img/${p}.png"><span>${player.powerups[p]}</span></div>`
+        })
+        powerups += "</div>"
+        element.innerHTML += powerups
+    }
     return element
 }
 
-function updatePlayerList(players) {
+function updatePlayerList(gamemode, players) {
     const newPlayers = filterPlayerData(players)
     if (JSON.stringify(lastPlayers) !== JSON.stringify(newPlayers)) {
         emptyElement(playerlist)
+        const header = document.createElement("div")
+        header.className = "player"
+        let fancyMode = gamemode
+        if (fancyMode === "score") {
+            fancyMode = "Highest score"
+        }
+        if (fancyMode === "lastalive") {
+            fancyMode = "Survive the longest"
+        }
+        header.textContent = `Goal: ${fancyMode}`
+        playerlist.appendChild(header)
         players.forEach(player => {
             playerlist.appendChild(playerElement(player))
         })
@@ -222,9 +240,16 @@ function updateAreaShrink(countdown) {
 function filterPlayerData(players) {
     return players.map(player => {
         // filter to only info that is relevant to updating playerlist
+        const detailedPowerups = JSON.parse(JSON.stringify(player.powerups))
+        player.powerups = {}
+        Object.keys(detailedPowerups).forEach(p => {
+            player.powerups[p] = (detailedPowerups[p] / 1000000000).toFixed(1)
+        })
         return {
             shape: player.shape,
             score: player.score,
+            alive: player.alive,
+            powerups: player.powerups,
             wins: player.wins
         }
     })
@@ -263,28 +288,49 @@ function updateServerSettings() {
 
 function updatePlayerSettings() {
     emptyElement(playerSettings)
+    hideElement(spectatorDisplay)
     // if there are no players yet, inform of spectator mode
     if (!localPlayers.length) {
         const element = document.createElement("div")
         element.textContent = "You are spectating, add a player to start."
         playerSettings.appendChild(element)
         playerSettings.appendChild(document.createElement("hr"))
+        if (gameData.state !== "connecting") {
+            showElement(spectatorDisplay)
+        }
     }
     localPlayers.forEach(player => {
         const element = document.createElement("div")
         element.classList.add("player")
-        element.innerHTML =  `
-        <div class="blob" style="background-color:${player.color};"></div>
-        <div>${player.name}</div>`
-        const button = document.createElement("button")
-        button.textContent = "Edit"
-        button.classList.add("btn", "waves-effect", "waves-light")
-        button.addEventListener("click", () => {
+        const registedPlayer = gameData && gameData.players && gameData.players
+            .find(p => p.uuid === player.uuid)
+        let extraInfo = ""
+        if (!registedPlayer) {
+            extraInfo = `<span class="warning">Player has yet to be comfirmed
+            by the server, room might be full or the username is taken</span>`
+            element.classList.add("grey-text")
+        }
+        element.innerHTML =  `<div class="blob" style="background-color:
+        ${registedPlayer?.color || player.color};"></div>
+        <div>${player.name} ${extraInfo}</div>`
+        const editButton = document.createElement("button")
+        editButton.textContent = "Edit"
+        editButton.classList.add("btn", "waves-effect", "waves-light")
+        editButton.style.marginRight = "1em"
+        editButton.addEventListener("click", () => {
             updateAddPlayer(true, player)
             addPlayerModal.open()
         })
+        const deleteButton = document.createElement("button")
+        deleteButton.textContent = "Remove"
+        deleteButton.classList.add("btn", "red", "waves-effect", "waves-light")
+        deleteButton.addEventListener("click", () => {
+            removePlayer(player.uuid)
+            updatePlayerSettings()
+        })
         playerSettings.appendChild(element)
-        playerSettings.appendChild(button)
+        playerSettings.appendChild(editButton)
+        playerSettings.appendChild(deleteButton)
         playerSettings.appendChild(document.createElement("hr"))
     })
     const addButton = document.createElement("button")
@@ -328,7 +374,7 @@ function updateAddPlayer(edit = false, player) {
         }
     } else {
         title.textContent = "Add a new player"
-        playerColorField.value = "#FFFFFF"
+        playerColorField.value = "#000000"
         playerColorField.disabled = false
         playerNameField.value = null
         playerNameField.disabled = false

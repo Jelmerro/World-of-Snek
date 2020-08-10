@@ -20,8 +20,8 @@
 "use strict"
 
 /* global resizeCanvas windowWidth windowHeight background translate stroke
-circle text textSize textAlign fill square rectMode noFill noStroke scale
-strokeWeight updatePlayerList updateAreaShrink showElement hideElement
+circle text textSize textAlign fill square rectMode noFill noStroke scale image
+strokeWeight updatePlayerList updateAreaShrink showElement hideElement loadImage
 playerlist areaShrink preferredIP preferredPort connectModal M maxEntities
 updateServerSettings updatePlayerSettings dynamicScaling spectatorDisplay */
 
@@ -34,7 +34,8 @@ let gameData = {
 let windowScale = 1
 let lastCenter = [0, 0]
 let totalEntities
-const localPlayers = []
+let localPlayers = []
+const images = {}
 
 function setup() {
     resizeCanvas(windowWidth, windowHeight)
@@ -45,8 +46,18 @@ function setup() {
         M.toast({html: "Failed to connect to server"})
         connectModal.open()
     }
-    // localPlayers.push(makeNewPlayer("May", "#FFA500", controls.Arrows))
-    // localPlayers.push(makeNewPlayer("The cooler May", "#00FFFF", controls.WASD))
+    // localPlayers.push(makeNewPlayer("May", "#000000", controls.Arrows))
+    // localPlayers.push(makeNewPlayer("The cooler May", "#333333", controls.WASD))
+    images.superspeed = loadImage("img/superspeed.png")
+    images.speedup = loadImage("img/speedup.png")
+    images.speeddown = loadImage("img/speeddown.png")
+    images.cornerup = loadImage("img/cornerup.png")
+    images.cornerdown = loadImage("img/cornerdown.png")
+    images.sizeup = loadImage("img/sizeup.png")
+    images.sizedown = loadImage("img/sizedown.png")
+    images.mirrorcontrols = loadImage("img/mirrorcontrols.png")
+    images.flipshape = loadImage("img/flipshape.png")
+    images.ghost = loadImage("img/ghost.png")
 }
 
 function windowResized() {
@@ -64,7 +75,9 @@ function draw() {
     if (gameData.state === "connecting") {
         hideElement(playerlist)
         hideElement(areaShrink)
-        text("Ze blutüth device is ready to pair", 0, 0)
+        text("Welcome to World of Snek", 0, -25)
+        textSize(32)
+        text("Press Escape to open the menu", 0, 25)
     }
     if (gameData.state === "lobby") {
         hideElement(playerlist)
@@ -96,7 +109,7 @@ function draw() {
         drawPowerups()
         drawPlayers()
         showElement(playerlist)
-        updatePlayerList(gameData.players)
+        updatePlayerList(gameData.gamemode, gameData.players)
     }
     if (gameData.state === "ready") {
         scale(1, -1) // flip y back to render text
@@ -184,6 +197,12 @@ function connectSocket() {
             }
         })
         gameData = newGameData
+        if (oldGameData.countdown < newGameData.countdown) {
+            updatePlayerSettings()
+        }
+        if (oldGameData.players?.length !== newGameData.players?.length ) {
+            updatePlayerSettings()
+        }
     }
     socket.onclose = () => {
         gameData.state = "connecting"
@@ -196,7 +215,6 @@ function connectSocket() {
 
 // Make players with name, color, and preferred controls for up/down/left/right
 function makeNewPlayer(name, color, controls) {
-    hideElement(spectatorDisplay)
     return {
         name,
         color,
@@ -248,7 +266,6 @@ function drawAreas() {
     const initialArea = gameData.area.init
     stroke("#777777")
     if (gameData.area.shape === "square") {
-        // TODO: set color and stuff
         square(initialArea.x, initialArea.y, initialArea.r*2)
     } else if (gameData.area.shape === "circle") {
         circle(initialArea.x, initialArea.y, initialArea.r*2)
@@ -304,6 +321,9 @@ function drawPlayers() {
         if (!player.alive) {
             fill("#777777")
         }
+        if (Object.keys(player.powerups).includes("ghost")) {
+            fill(`${player.color}0a`)
+        }
         let shape = player.shape
         if (Object.keys(player.powerups).includes("flipshape")) {
             shape = shape === "square" ? "circle" : "square"
@@ -329,6 +349,12 @@ function drawPlayers() {
     })
 }
 
+function removePlayer(uuid) {
+    localPlayers = localPlayers.filter(p => p.uuid !== uuid)
+    const message = { uuid: uuid, type: "deleteplayer" }
+    socket.send(JSON.stringify(message))
+}
+
 function drawFood() {
     gameData.food.forEach(food => {
         fill(255)
@@ -338,14 +364,6 @@ function drawFood() {
 
 function drawPowerups() {
     gameData.powerups.forEach(powerup => {
-        //TODO color powerup according to powerup.type
-        fill("#ff00ff")
-        circle(powerup.x, powerup.y, 40)
-        translate(1, -1) // flip y back to render text
-        scale(1, -1) // flip y back to render text
-        //TODO fix text being at the wrong position, or remove it when colors are fixed
-        text(powerup.type, powerup.x, powerup.y)
-        translate(1, -1) // flip y back to render text
-        scale(1, -1) // flip y back to render text
+        image(images[powerup.type], powerup.x - 20, powerup.y - 20, 40, 40)
     })
 }
