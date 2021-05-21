@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019-2020 Jelmer van Arnhem
+* Copyright (C) 2019-2021 Jelmer van Arnhem
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,20 @@
 */
 "use strict"
 
-const http = require("http")
-const fs = require("fs")
+const {createServer} = require("http")
+const {createReadStream, existsSync, lstatSync} = require("fs")
 require("colors")
 
 const serve = (port = 8000) => {
-    http.createServer((req, res) => {
+    createServer((req, res) => {
         const requestUrl = `${__dirname}/../client/${req.url}`
         const requestUrlIndex = `${requestUrl}/index.html`
         try {
             if (isFile(requestUrl)) {
-                fs.createReadStream(requestUrl).pipe(res)
+                createReadStream(requestUrl).pipe(res)
                 res.writeHead(200)
             } else if (isFile(requestUrlIndex)) {
-                fs.createReadStream(requestUrlIndex).pipe(res)
+                createReadStream(requestUrlIndex).pipe(res)
                 res.writeHead(200)
             } else {
                 res.writeHead(404)
@@ -44,14 +44,14 @@ const serve = (port = 8000) => {
 
 const isFile = f => {
     try {
-        return fs.existsSync(f) && fs.lstatSync(f).isFile()
+        return existsSync(f) && lstatSync(f).isFile()
     } catch (e) {
         return false
     }
 }
 
-if (module.parent) {
-    module.exports = serve
-} else {
+if (require.main === module) {
     serve()
+} else {
+    module.exports = serve
 }

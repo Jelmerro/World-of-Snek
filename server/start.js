@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019-2020 Jelmer van Arnhem
+* Copyright (C) 2019-2021 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,7 @@
 */
 "use strict"
 
-const os = require("os")
-const args = require("minimist")(process.argv.slice(2))
-const ws = require("ws")
 require("colors")
-
-const www = require("./www")
 
 // UTIL
 
@@ -219,9 +214,9 @@ const possiblyUsePowerup = (player, x, y) => {
     const allPowerups = JSON.parse(JSON.stringify(game.powerups))
     for (const powerup of allPowerups) {
         if (distance(x, y, powerup.x, powerup.y) < currentPlayerSize(player) + POWERUPRADIUS) {
-            const pickedUp = game.powerups.filter(p => {
+            const pickedUp = game.powerups.find(p => {
                 return p.x === powerup.x && p.y === powerup.y
-            })[0]
+            })
             game.powerups.splice(game.powerups.indexOf(pickedUp), 1)
             if (powerup.type.startsWith("all")) {
                 game.players.filter(p => p.uuid !== player.uuid).forEach(p => {
@@ -243,9 +238,9 @@ const possiblyEatFood = (player, x, y) => {
     const allFood = JSON.parse(JSON.stringify(game.food))
     for (const food of allFood) {
         if (distance(x, y, food.x, food.y) < currentPlayerSize(player) + FOODRADIUS) {
-            const pickedUp = game.food.filter(f => {
+            const pickedUp = game.food.find(f => {
                 return f.x === food.x && f.y === food.y
-            })[0]
+            })
             game.food.splice(game.food.indexOf(pickedUp), 1)
             player.score += 1
             player.speed = player.speed + SPEED * 0.1
@@ -368,11 +363,10 @@ const generateNewArea = () => {
 const shiftArea = () => {
     game.area.current = Object.assign({}, game.area.new)
     game.area.new = {}
-    for (const player of game.players) {
-        if (game.state !== "game") {
-            break
+    if (game.state === "game") {
+        for (const player of game.players) {
+            checkOutOfBoundsAndWrap(player, player.position[0][0], player.position[0][1], false)
         }
-        checkOutOfBoundsAndWrap(player, player.position[0][0], player.position[0][1], false)
     }
 }
 const withinArea = e => {
@@ -535,7 +529,7 @@ const startGame = autotrigger => {
         game.settings.powerupsRate = "low"
         if (coinflip(0.3)) {
             game.settings.powerupsRate = "medium"
-        } else if (coinflip(0.3)) {
+        } else if (coinflip(0.5)) {
             game.settings.powerupsRate = "high"
         }
     }
@@ -650,12 +644,10 @@ const commands = [
         description: "Change a server setting, will be used when starting the next game",
         acceptsArgs: true,
         action: input => {
-            const startupOnlySettings = [
-                "serverPort", "websitePort", "serverOnly"
-            ]
+            const startupOnlySettings = ["serverPort", "websitePort", "serverOnly"]
             const setting = input.split(" ")[0]
             const value = input.split(" ").slice(1).join(",")
-            if (!defaultSettings[setting]) {
+            if (defaultSettings[setting] === undefined) {
                 console.log("This setting does not exist!".red)
             } else if (startupOnlySettings.includes(setting)) {
                 console.log("This setting can only be changed when starting the server".red)
@@ -780,7 +772,7 @@ const processMessage = (clientId, message) => {
 const announceWinner = player => {
     if (player) {
         for (const c of clients) {
-            const winner = c.players.filter(p => p.uuid === player.uuid)[0]
+            const winner = c.players.find(p => p.uuid === player.uuid)
             if (winner) {
                 winner.wins += 1
                 game.lastwinner = winner
@@ -925,13 +917,9 @@ const informClients = () => {
                 filteredGame.area[area].r = Math.round(filteredGame.area[area].r)
             }
         }
-        filteredGame.food = filteredGame.food.map(f => {
-            return {
-                x: Math.round(f.x),
-                y: Math.round(f.y),
-                r: Math.round(f.r)
-            }
-        })
+        filteredGame.food = filteredGame.food.map(f => ({
+            x: Math.round(f.x), y: Math.round(f.y), r: Math.round(f.r)
+        }))
         filteredGame.players.forEach(player => {
             delete player.direction
             delete player.preferredMove
@@ -953,11 +941,7 @@ const informClients = () => {
         }
         const message = JSON.stringify(filteredGame)
         clients.forEach(c => {
-            setTimeout(() => {
-                if (c.socket) {
-                    c.socket.send(message)
-                }
-            }, 0)
+            setTimeout(() => c.ws?.send(message), 0)
         })
         oldGameState = gameState
     }
@@ -976,11 +960,7 @@ const informClients = () => {
             lastwinner: game.lastwinner
         })
         clients.forEach(c => {
-            setTimeout(() => {
-                if (c.socket) {
-                    c.socket.send(message)
-                }
-            }, 0)
+            setTimeout(() => c.ws?.send(message), 0)
         })
     }
 }
@@ -1053,6 +1033,7 @@ const settingsDescriptions = {
 const printSettings = () => {
     console.log("Current settings:".yellow, JSON.stringify(settings, null, 2).yellow)
 }
+const args = require("minimist")(process.argv.slice(2))
 if (args.help) {
     console.log("World of Snek - Server help\n".green)
     console.log("You can start the server without arguments to get started,".blue)
@@ -1175,26 +1156,26 @@ const game = {
     wrap: null
 }
 
-if (!module.parent) {
-    const server = new ws.Server({
-        port: settings.serverPort
-    })
+if (require.main === module) {
+    const {Server} = require("ws")
+    const server = new Server({port: settings.serverPort})
     server.on("connection", (client, req) => {
-        const clientAlreadyConnected = clients.find(
-            c => c.ip === req.connection.remoteAddress && c.socket)
+        const ipAddr = req.headers["x-forwarded-for"]?.split(/\s*,\s*/)[0]
+            || req.socket?.remoteAddress
+        const clientAlreadyConnected = clients.find(c => c.ws && c.ip === ipAddr)
+        if (!ipAddr) {
+            client.close()
+            console.log("invalid client blocked, no ip address".red)
+            return
+        }
         if (clientAlreadyConnected) {
             client.close()
-            console.log("duplicate client blocked, already connected:".red,
-                req.connection.remoteAddress.red)
+            console.log("duplicate client blocked, already connected:".red, ipAddr.red)
             return
         }
         const clientId = clients.length
-        console.log("new client connected:".green, req.connection.remoteAddress.green)
-        clients.push({
-            players: [],
-            socket: client,
-            ip: req.connection.remoteAddress
-        })
+        console.log("new client connected:".green, ipAddr.green)
+        clients.push({players: [], ws: client, ip: ipAddr})
         client.on("message", msg => {
             try {
                 // check if the message is json and contains a body type
@@ -1202,12 +1183,12 @@ if (!module.parent) {
                 if (message.type && typeof message.type === "string") {
                     processMessage(clientId, message)
                 }
-            } catch (e) {
+            } catch {
                 // no action required
             }
         })
         client.on("close", () => {
-            console.log("client disconnected:".red, req.connection.remoteAddress.red)
+            console.log("client disconnected:".red, ipAddr.red)
             game.players.forEach(gp => {
                 clients[clientId].players.forEach(cp => {
                     if (gp.uuid === cp.uuid) {
@@ -1216,7 +1197,7 @@ if (!module.parent) {
                 })
             })
             clients[clientId].players = []
-            clients[clientId].socket = null
+            clients[clientId].ws = null
         })
     })
     process.openStdin().addListener("data", d => {
@@ -1234,11 +1215,12 @@ if (!module.parent) {
     setInterval(informClients, 10)
     setInterval(timer, 10)
     if (!settings.serverOnly) {
+        const www = require("./www")
         www(settings.websitePort)
         console.log("Client started!".green)
-        const interfaces = os.networkInterfaces()
-        Object.keys(interfaces).forEach(i => {
-            interfaces[i].forEach(l => {
+        const {networkInterfaces} = require("os")
+        Object.values(networkInterfaces()).forEach(i => {
+            i.forEach(l => {
                 console.log(` - http://${l.address}:${settings.websitePort}`.blue)
             })
         })

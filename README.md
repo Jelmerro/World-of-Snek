@@ -40,8 +40,8 @@ but it's the default option when hacking stuff together until it works.
 
 `(in other words, there is no design, much like this readme actually)`
 
-There is actually a small eslint config included,
-but even so the code is "riddled" with dissatisfying and laughable code 🐍
+There is actually an eslint config included,
+but even so the code is "riddled" with overcomplex and laughable code 🐍
 
 # License
 
@@ -58,4 +58,4 @@ see the [LICENSE](LICENSE) file for exact terms.
 ### Client dependencies
 
 - [p5.js](https://github.com/processing/p5.js)
-- [materialize](https://github.com/Dogfalo/materialize).
+- [materialize](https://github.com/Dogfalo/materialize)
