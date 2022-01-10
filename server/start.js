@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019-2021 Jelmer van Arnhem
+* Copyright (C) 2019-2022 Jelmer van Arnhem
 * Copyright (C) 2019 M4Yt
 *
 * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,6 @@
 * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 "use strict"
-
-require("colors")
 
 // UTIL
 
@@ -494,14 +492,14 @@ const startGame = autotrigger => {
         if (autotrigger) {
             game.countdown = LOBBYCOUNTDOWN
         } else {
-            console.log("not enough players to start".red)
+            console.log("not enough players to start")
         }
         return
     }
     game.countdown = READYCOUNTDOWN
-    console.log("starting a new game with these players:".green)
+    console.log("starting a new game with these players:")
     for (const player of game.players) {
-        console.log(` - ${player.uuid} ${player.name} ${player.color}`.blue)
+        console.log(` - ${player.uuid} ${player.name} ${player.color}`)
     }
     game.settings = JSON.parse(JSON.stringify(settings))
     if (game.settings.areaShape === "random") {
@@ -602,7 +600,7 @@ const startGame = autotrigger => {
     game.state = "ready"
 }
 const stopGame = () => {
-    console.log("game has ended".green)
+    console.log("game has ended")
     game.countdown = LOBBYCOUNTDOWN
     game.state = "lobby"
 }
@@ -614,7 +612,7 @@ const commands = [
             if (game.state === "lobby") {
                 startGame()
             } else {
-                console.log("A game is already running".yellow)
+                console.log("A game is already running")
             }
         }
     },
@@ -623,11 +621,11 @@ const commands = [
         description: "Stop the current game if one is running, no winner will be selected",
         action: () => {
             if (game.state === "ready") {
-                console.log("The game is still starting".yellow)
+                console.log("The game is still starting")
             } else if (game.state === "game") {
                 stopGame()
             } else {
-                console.log("No game is running yet".yellow)
+                console.log("No game is running yet")
             }
         }
     },
@@ -648,15 +646,15 @@ const commands = [
             const setting = input.split(" ")[0]
             const value = input.split(" ").slice(1).join(",")
             if (defaultSettings[setting] === undefined) {
-                console.log("This setting does not exist!".red)
+                console.log("This setting does not exist!")
             } else if (startupOnlySettings.includes(setting)) {
-                console.log("This setting can only be changed when starting the server".red)
+                console.log("This setting can only be changed when starting the server")
             } else if (value) {
                 const newSettings = {}
                 newSettings[setting] = value
                 parseAndApplySettings(newSettings)
             } else {
-                console.log(`Current value of '${setting}' is: ${settings[setting]}`.blue)
+                console.log(`Current value of '${setting}' is: ${settings[setting]}`)
             }
         }
     },
@@ -664,12 +662,12 @@ const commands = [
         command: "help",
         description: "Show this list of commands",
         action: () => {
-            console.log("These are the possible commands:".green)
+            console.log("These are the possible commands:")
             for (const c of commands) {
                 if (c.syntax) {
-                    console.log(` ${"-".green} ${c.syntax.yellow} ${c.description.blue}`)
+                    console.log(` - ${c.syntax} ${c.description}`)
                 } else {
-                    console.log(` ${"-".green} ${c.command.yellow} ${c.description.blue}`)
+                    console.log(` - ${c.command} ${c.description}`)
                 }
             }
         }
@@ -678,7 +676,7 @@ const commands = [
         command: "exit",
         description: "Stop all World of Snek activities and exit",
         action: () => {
-            console.log("Bye".green)
+            console.log("Bye")
             process.exit(0)
         }
     }
@@ -690,7 +688,7 @@ const processCLI = message => {
     if (command) {
         command.action(message.replace(command.command, ""))
     } else {
-        console.log("Unknown command, use 'help' for details".red)
+        console.log("Unknown command, use 'help' for details")
     }
 }
 const randomColor = () => {
@@ -732,8 +730,8 @@ const processMessage = (clientId, message) => {
         if (red < 30 && blue < 30 && green < 30) {
             message.color = randomColor()
         }
-        console.log(`client ${clients[clientId].ip} added new player:`.green)
-        console.log(` - ${message.uuid} ${message.name} ${message.color}`.blue)
+        console.log(`client ${clients[clientId].ip} added new player:`)
+        console.log(` - ${message.uuid} ${message.name} ${message.color}`)
         clients[clientId].players.push({
             uuid: message.uuid,
             name: message.name,
@@ -776,13 +774,13 @@ const announceWinner = player => {
             if (winner) {
                 winner.wins += 1
                 game.lastwinner = winner
-                console.log("the winner is:".green)
-                console.log(` - ${winner.uuid} ${winner.name} ${winner.color}`.blue)
+                console.log("the winner is:")
+                console.log(` - ${winner.uuid} ${winner.name} ${winner.color}`)
                 return
             }
         }
     }
-    console.log("it's a draw".green)
+    console.log("it's a draw")
     game.lastwinner = null
 }
 const gameloop = delta => {
@@ -807,7 +805,7 @@ const gameloop = delta => {
                 } else if (highestScoringPlayers.length === 1) {
                     announceWinner(highestScoringPlayers[0])
                 } else {
-                    console.log("it's a draw".green)
+                    console.log("it's a draw")
                     game.lastwinner = null
                 }
                 stopGame()
@@ -1031,35 +1029,35 @@ const settingsDescriptions = {
     serverOnly: "When provided, no website will be hosted, only runs the server"
 }
 const printSettings = () => {
-    console.log("Current settings:".yellow, JSON.stringify(settings, null, 2).yellow)
+    console.log("Current settings:", JSON.stringify(settings, null, 2))
 }
 const args = require("minimist")(process.argv.slice(2))
 if (args.help) {
-    console.log("World of Snek - Server help\n".green)
-    console.log("You can start the server without arguments to get started,".blue)
-    console.log("or pass any of these arguments listed to change the settings\n".blue)
+    console.log("World of Snek - Server help\n")
+    console.log("You can start the server without arguments to get started,")
+    console.log("or pass any of these arguments listed to change the settings\n")
     for (const setting of Object.keys(defaultSettings)) {
-        console.log(`--${setting}`.green, "\n  default:", String(defaultSettings[setting]).yellow)
+        console.log(`--${setting}\n  default: ${defaultSettings[setting]}`)
         console.log(`  ${settingsDescriptions[setting]}`)
         if (selectOptions[setting]) {
-            console.log("  Options:", String(selectOptions[setting]).blue)
+            console.log(`  Options: ${selectOptions[setting]}`)
         }
         console.log()
     }
     process.exit(0)
 }
 if (args._ && args._.length > 0) {
-    console.log(`Trailing arguments: ${args._}`.red)
-    console.log("Use --help to see the list of options".blue)
+    console.log(`Trailing arguments: ${args._}`)
+    console.log("Use --help to see the list of options")
     process.exit(1)
 }
 const settings = JSON.parse(JSON.stringify(defaultSettings))
 const parseAndApplySettings = (newSettings, exitOnFail = false) => {
     for (const arg of Object.keys(newSettings)) {
         if (!Object.keys(defaultSettings).includes(arg) && !["serverOnly", "_"].includes(arg)) {
-            console.log(`Unknown setting: ${arg}`.red)
+            console.log(`Unknown setting: ${arg}`)
             if (exitOnFail) {
-                console.log("Use --help to see the list of options".blue)
+                console.log("Use --help to see the list of options")
                 process.exit(1)
             }
         }
@@ -1069,9 +1067,9 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
             if (selectOptions[option].includes(String(newSettings[option]))) {
                 settings[option] = String(newSettings[option])
             } else {
-                console.log(`Setting '${option}' must be set to one of: ${selectOptions[option]}`.red)
+                console.log(`Setting '${option}' must be set to one of: ${selectOptions[option]}`)
                 if (exitOnFail) {
-                    console.log("Use --help to see the list of options".blue)
+                    console.log("Use --help to see the list of options")
                     process.exit(1)
                 }
             }
@@ -1081,9 +1079,9 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
         if (Number(newSettings.maxPlayers) > 1) {
             settings.maxPlayers = Number(newSettings.maxPlayers)
         } else {
-            console.log("Maximum number of players must be at least 2".red)
+            console.log("Maximum number of players must be at least 2")
             if (exitOnFail) {
-                console.log("Use --help to see the list of options".blue)
+                console.log("Use --help to see the list of options")
                 process.exit(1)
             }
         }
@@ -1092,9 +1090,9 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
         if (Number(newSettings.maxPlayersPerClient) >= 1) {
             settings.maxPlayersPerClient = Number(newSettings.maxPlayersPerClient)
         } else {
-            console.log("Maximum number of players per client must be at least 1".red)
+            console.log("Maximum number of players per client must be at least 1")
             if (exitOnFail) {
-                console.log("Use --help to see the list of options".blue)
+                console.log("Use --help to see the list of options")
                 process.exit(1)
             }
         }
@@ -1105,7 +1103,7 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
             if (defaultSettings.enabledPowerups.includes(powerup)) {
                 settings.enabledPowerups.push(powerup)
             } else {
-                console.log(`Ignoring unknown powerup '${powerup}'`.yellow)
+                console.log(`Ignoring unknown powerup '${powerup}'`)
             }
         }
     }
@@ -1113,7 +1111,7 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
         if (Number(newSettings.serverPort) > 0 && Number(newSettings.serverPort) < 100000) {
             settings.serverPort = Number(newSettings.serverPort)
         } else {
-            console.log("Invalid server port number, can't start the server".red)
+            console.log("Invalid server port number, can't start the server")
             process.exit(1)
         }
     }
@@ -1121,12 +1119,12 @@ const parseAndApplySettings = (newSettings, exitOnFail = false) => {
         if (Number(newSettings.websitePort) > 0 && Number(newSettings.websitePort) < 100000) {
             settings.websitePort = Number(newSettings.websitePort)
         } else {
-            console.log("Invalid website port number, can't host the website, skipping server".red)
+            console.log("Invalid website port number, can't host the website, skipping server")
             process.exit(1)
         }
     }
     if (settings.serverPort === settings.websitePort) {
-        console.log("Port numbers can not be the same!".red)
+        console.log("Port numbers can not be the same!")
         process.exit(1)
     }
     settings.serverOnly = !!newSettings.serverOnly
@@ -1165,16 +1163,16 @@ if (require.main === module) {
         const clientAlreadyConnected = clients.find(c => c.ws && c.ip === ipAddr)
         if (!ipAddr) {
             client.close()
-            console.log("invalid client blocked, no ip address".red)
+            console.log("invalid client blocked, no ip address")
             return
         }
         if (clientAlreadyConnected) {
             client.close()
-            console.log("duplicate client blocked, already connected:".red, ipAddr.red)
+            console.log("duplicate client blocked, already connected:", ipAddr)
             return
         }
         const clientId = clients.length
-        console.log("new client connected:".green, ipAddr.green)
+        console.log("new client connected:", ipAddr)
         clients.push({players: [], ws: client, ip: ipAddr})
         client.on("message", msg => {
             try {
@@ -1188,7 +1186,7 @@ if (require.main === module) {
             }
         })
         client.on("close", () => {
-            console.log("client disconnected:".red, ipAddr.red)
+            console.log("client disconnected:", ipAddr)
             game.players.forEach(gp => {
                 clients[clientId].players.forEach(cp => {
                     if (gp.uuid === cp.uuid) {
@@ -1217,16 +1215,16 @@ if (require.main === module) {
     if (!settings.serverOnly) {
         const www = require("./www")
         www(settings.websitePort)
-        console.log("Client started!".green)
+        console.log("Client started!")
         const {networkInterfaces} = require("os")
         Object.values(networkInterfaces()).forEach(i => {
             i.forEach(l => {
-                console.log(` - http://${l.address}:${settings.websitePort}`.blue)
+                console.log(` - http://${l.address}:${settings.websitePort}`)
             })
         })
         console.log("")
     }
     printSettings()
-    console.log("\nServer started!".green)
-    console.log(" - You can interact with the server by typing commands!\n".blue)
+    console.log("\nServer started!")
+    console.log(" - You can interact with the server by typing commands!\n")
 }

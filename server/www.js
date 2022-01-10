@@ -1,6 +1,6 @@
 /*
 * World of Snek - Snake Battle Royale
-* Copyright (C) 2019-2021 Jelmer van Arnhem
+* Copyright (C) 2019-2022 Jelmer van Arnhem
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 
 const {createServer} = require("http")
 const {createReadStream, existsSync, lstatSync} = require("fs")
-require("colors")
 
 const serve = (port = 8000) => {
     createServer((req, res) => {
@@ -37,7 +36,7 @@ const serve = (port = 8000) => {
                 res.end()
             }
         } catch (e) {
-            console.log(e.toString().red)
+            console.log(e)
         }
     }).listen(port)
 }

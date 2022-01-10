@@ -23,7 +23,7 @@
 # Server configuration
 
 - Go to the server folder in any terminal
-- `npm i && node start`
+- `npm ci && node start`
 
 You can change the settings while running the server with interactive commands,
 or use the command line arguments to configure them: `node start --help`.
@@ -53,7 +53,6 @@ see the [LICENSE](LICENSE) file for exact terms.
 
 - [ws](https://github.com/websockets/ws)
 - [minimist](https://github.com/substack/minimist)
-- [colors](https://github.com/Marak/colors.js)
 
 ### Client dependencies
 
